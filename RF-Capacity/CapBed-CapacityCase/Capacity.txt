@@ -166,18 +166,18 @@ rest-api
     \    ${item}    100
     [Teardown]    close all browsers
 
-group-vpn
-    [Setup]
-    [Template]    group-vpn
-    : FOR    ${item}    IN    @{equipment_type}
-    \    ${item}    250
-    [Teardown]    close all browsers
-
 s2s-vpn
     [Setup]
     [Template]    S2S-vpn
     : FOR    ${item}    IN    @{equipment_type}
     \    ${item}
+    [Teardown]    close all browsers
+
+group-vpn
+    [Setup]
+    [Template]    group-vpn
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    250
     [Teardown]    close all browsers
 
 phase2
