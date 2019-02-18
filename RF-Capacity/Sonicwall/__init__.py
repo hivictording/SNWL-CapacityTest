@@ -1,8 +1,8 @@
-from bptest import bptest
+from capacitytest import capacitytest
 from version import VERSION
 
 __version__='0.1'
 
 
-class Sonicwall(bptest):
+class Sonicwall(capacitytest):
 	 ROBOT_LIBRARY_SCOPE ='GLOBAL'

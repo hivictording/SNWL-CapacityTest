@@ -1,7 +1,6 @@
 *** Settings ***
 Library           Telnet
 Library           Sonicwall
-Library           breakingpoint    10.7.1.234    admin    admin
 Library           Collections
 Resource          ../keyword/keyword.txt
 Library           Selenium2Library
@@ -9,8 +8,7 @@ Library           DateTime
 Library           SSHLibrary
 
 *** Variables ***
-@{equipment_type}    5600    TZ-300P    TZ-600P    9250    9450    4650    5650
-...               6650    9400    # 待测试设备类型：TZ-600P,3650-9650, 3600-6600,9200-9800,SOHO-250,TZ-350。列表形式，顺序执行
+@{equipment_type}    9250    # 待测试设备类型：TZ-600P,3650-9650, 3600-6600,9200-9800,SOHO-250,TZ-350。列表形式，顺序执行
 ${location}       F:/Lucy_Working/TestCases_Config_Automation    # 配置保存地址，注意是斜杠方向”/"
 ${ftp_username}    admin    # ftp 用户名
 ${ftp_password}    admin    # ftp密码

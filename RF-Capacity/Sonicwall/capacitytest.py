@@ -7,7 +7,7 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from xlutils.copy import copy
 
-class bptest:
+class capacitytest:
 
    def __init__(self):
         pass
