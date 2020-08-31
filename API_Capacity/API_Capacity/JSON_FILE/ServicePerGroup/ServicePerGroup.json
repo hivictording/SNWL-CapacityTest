@@ -1,0 +1,24 @@
+{
+    "service_groups": [
+        {
+            "name": "SERVICE_PER_GROUP",
+            "service_object": [
+                {
+                    "name": "SERVICE_OBJ_4"
+                },
+                {
+                    "name": "SERVICE_OBJ_3"
+                },
+                {
+                    "name": "SERVICE_OBJ_2"
+                },
+                {
+                    "name": "SERVICE_OBJ_1"
+                },
+                {
+                    "name": "SERVICE_OBJ_0"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "ixia_2",
+                "zone": "VPN",
+                "network": {
+                    "subnet": "21.1.2.0",
+                    "mask": "255.255.255.0"
+                }
+            }
+        }
+    ]
+}

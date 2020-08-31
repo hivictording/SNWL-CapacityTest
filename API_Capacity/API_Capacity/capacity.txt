@@ -1,0 +1,435 @@
+*** Settings ***
+Library           SonicwallAPI    admin    password
+Resource          gloabl_parameters.txt
+Library           Telnet
+Library           Capacity
+Library           DateTime
+Library           SSHLibrary
+
+*** Variables ***
+${ipstr}          10.7.100.47    # 10.7.13.32,10.7.13.33,10.7.13.34,10.7.13.38,10.7.13.36,10.7.100.27,10.210.5.34,10.206.21.192,10.7.5.67,
+${script_location}    D:/JK/API_Capacity/API_Capacity    # D:/JK/API_Capacity/API_Capacity
+${log_location}    C:/Users/LuLi.SV/Desktop/GEN7-S394    # C:/Users/LuLi.SV/Desktop/GEN7-S394/TZ-470;;C:/Users/LuLi.SV/Desktop/NGPE-ISSUE/Sprint67
+${ftp_username}    luli
+${ftp_password}    password
+${ftpServer_ip}    10.103.18.149
+@{equipment_type}    TZ-470
+${productMatrix_path}    D:/JK/API_Capacity/Physical_ProductMatrix
+
+*** Test Cases ***
+POST
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    ${filename}    set variable    ${script_location}/${type}_${version}_orig.exp
+    ${filename1}    set variable    ${script_location}/${type}_${version}_orig.wri
+    export_config    ${ipstr}    ${filename}
+    export_tsr    ${ipstr}    ${filename1}
+    add_objects    ${type}    ${casename}    ${script_location}    ${sn}    ${en}
+    ${filename2}    set variable    ${script_location}/${type}_${version}_${en}${casename}.exp
+    ${filename3}    set variable    ${script_location}/${type}_${version}_${en}${casename}.wri
+    export_config    ${ipstr}    ${filename2}
+    export_tsr    ${ipstr}    ${filename3}
+
+Test
+    log to console    123
+
+restart
+    api_login    ${ipstr}
+    restart_box    ${ipstr}
+
+get_sys_info
+    Comment    login    ${ipstr}
+    Comment    logout    ${ipstr}
+    Comment    ${r_json}    export_TraceLog    ${ipstr}
+    Comment    ${info_name}    set variable    trace log
+    ${info_name}    set variable    max security policy
+    Comment    ${info_name}    set variable    max dos policy
+    Comment    ${info_name}    set variable    System Status
+    get_SystemInfo    ${ipstr}    ${info_name}    ${script_location}    ${script_location}
+
+GET
+    ${casename}    set variable    Address Objects
+    ${num}    get_objects    ${ipstr}    ${casename}    ${script_location}
+
+change_password
+    ${old_pw}    set variable    password
+    ${new_pw}    set variable    sonicwall
+    change_password    ${ipstr}    ${old_pw}    ${new_pw}
+
+export_exp_tsr
+    ###forGEN7
+    Comment    login    ${ipstr}
+    Comment    ${filename}    set variable    ${script_location}/TZ-470-maxVLAN50_S369.exp
+    Comment    ${filename1}    set variable    ${script_location}/TZ-470-maxVLAN50_S369.wri
+    Comment    ${filename2}    set variable    ${script_location}/TZ-470-maxVLAN50_S369.core.gz.gpg
+    Comment    export_config    ${ipstr}    ${filename}
+    Comment    export_tsr    ${ipstr}    ${filename1}
+    Comment    export_coreDump    ${ipstr}    ${filename2}    core-7.0.0.0-949-285e035e-vmware-tWebMain2-=194-1595328956.core.gz.gpg
+    ${type}    set variable    NSV1600
+    ###forNGPE
+    api_login    ${ipstr}
+    ${describe}    set variable    Orig-Sprint67
+    ${filename}    set variable    ${log_location}/${type}-${describe}.exp
+    ${filename1}    set variable    ${log_location}/${type}-${describe}.wri
+    ${filename2}    set variable    ${log_location}/TZ-470-maxVLAN50_S369.core.gz.gpg
+    export_config    ${ipstr}    ${filename}
+    export_tsr    ${ipstr}    ${filename1}
+
+postDos
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    Comment    post_DosPolicy    ${ipstr}    ${script_location}    ${sn}    ${en}
+    post_DosPolicy    ${ipstr}    ${script_location}    1    6000
+
+POST_byIPstr
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    ${mode}    set variable    TZ-470
+    Comment    ${casename}    set variable    orig
+    Comment    ${filename}    set variable    ${log_location}/${mode}-${casename}.exp
+    Comment    ${filename1}    set variable    ${log_location}/${mode}-${casename}.wri
+    Comment    export_config    ${ipstr}    ${filename}
+    Comment    export_tsr    ${ipstr}    ${filename1}
+    Comment    Comment    post_VLAN    ${ipstr}    ${script_location}    1    12
+    Comment    post_LocalUser    ${ipstr}    ${script_location}    1    251
+    Comment    post_TunnelInterface    ${ipstr}    ${script_location}    1    50
+    Comment    post_VLAN    ${ipstr}    ${script_location}    1    52
+    Comment    post_staticRoute    ${ipstr}    ${script_location}    1    500
+    Comment    post_natPolicy    ${ipstr}    ${script_location}    1    520
+    post_arp    ${ipstr}    ${script_location}    1    300
+    ${casename1}    set variable    nat-pol_test
+    ${filename2}    set variable    ${log_location}/${mode}-${casename1}.exp
+    ${filename3}    set variable    ${log_location}/${mode}-${casename1}.wri
+    export_config    ${ipstr}    ${filename2}
+    export_tsr    ${ipstr}    ${filename3}
+    Comment    post_VLAN    ${ipstr}    ${script_location}    1    200
+    Comment    post_AddressObject    ${ipstr}    ${sn}    ${en}
+    Comment    post_ServiceObject    ${ipstr}    ${sn}    ${en}
+    Comment    post_TunnelInterface    ${ipstr}    ${sn}    ${en}
+    Comment    post_AccessRules    ${ipstr}    61    66
+    Comment    post_vpn_pol_site2site    ${ipstr}    1    5
+    Comment    post_DosPolicy    ${ipstr}    1    6000
+    Comment    post_DosPolicy_250    ${ipstr}    251    500
+    Comment    post_vpn_pol_forPraveen    ${ipstr}    25    50
+    Comment    post_BotnetFilter    ${ipstr}    1    10
+    Comment    post_GeoIPFilter    ${ipstr}    1    10
+    Comment    post_RestAPIAgents    ${ipstr}    1    10
+
+POST_byType
+    api_login    10.7.13.36
+    set_configMode    10.7.13.36
+    ${filename}    set variable    ${script_location}/${type}_${version}.exp
+    ${filename1}    set variable    ${script_location}/${type}_${version}.wri
+    export_config    ${ipstr}    ${filename}
+    export_tsr    ${ipstr}    ${filename1}
+    add_objects    ${type}    ${casename}    ${script_location}    1    256
+
+importOrigConfiguration
+    [Template]    importOrigConf
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+vlan
+    [Template]    vlan_case
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+Test-Preparation
+    downloadVersion
+    configfirewall
+    #Create product matrix file
+    CreateTargetCSV
+    #export orig conf
+    ${conf_name}    set variable    orig
+    exportConf    ${conf_name}
+
+arp_case
+    ${ipstr}    get_ipstr    ${script_location}    ${type}
+    ${console_ip}    ${console_port}    get_consoleInfo    ${type}
+    #import orig conf
+    Comment    importOrigConf
+    #add objects
+    ${test_case}    evaluate    'Static ARP Entries'
+    ${max_arp}    get_target_fromCSV    ${test_case}
+    log to console    Target value:${max_arp}
+    ${num}    evaluate    ${max_arp}+2
+    add_objects    ${type}    ${test_case}    ${script_location}    1    ${num}
+    #check the values
+    ${curr_arp}    get_arp    ${ipstr}
+    ${path}    ${name}    get_target_file
+    ${arp_result}    set variable    ${max_arp}/${curr_arp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    22    ${curr_arp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    22    ${arp_result}
+    #export max objects
+    ${conf_name}    set variable    ${max_arp}arp
+    exportConf    ${conf_name}
+    #delete all
+    CLI-noItems    ${console_ip}    ${console_port}    no arp entries
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    ${current_arp}    get_arp    ${ipstr}
+    run keyword if    ${current_arp}==0    log    Deleted all arp entries successfully!! FINISHED ARP TEST!!!
+    ...    ELSE    FAIL    Failed to deleted all arp entries!! Remain=${current_arp}
+
+addressObj_case
+    ${ipstr}    get_ipstr    ${script_location}    ${type}
+    ${console_ip}    ${console_port}    get_consoleInfo    ${type}
+    factory_default_configure
+    #import orig conf
+    importOrigConf
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_ao_tsr}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    log to console    default AO=${init_value}
+    #add objects
+    ${test_case}    evaluate    'Address Objects'
+    ${max_value}    get_target_fromCSV    ${test_case}
+    log to console    Target value:${max_value}
+    ${num}    evaluate    ${max_value}+2
+    Comment    ${casename}    set variable    ARP
+    add_objects    ${type}    ${test_case}    ${script_location}    1    ${num}
+    #check the values
+    ${current_value}    ${max_ao_tsr}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    ${path}    ${name}    get_target_file
+    ${AO_result}    set variable    ${max_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    0    ${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    0    ${AO_result}
+    #export max objects
+    ${conf_name}    set variable    ${current_value}addressObj
+    exportConf    ${conf_name}
+    #delete all
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    ${init_value1}    ${max_value1}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!
+    ...    ELSE    Fail    Failed to deleted all objects!
+    Telnet.close connection
+    log to console    FINISHED ADDRESS OBJECTS TEST!!!
+
+123
+    importOrigConf
+
+*** Keywords ***
+login firewall
+    Telnet.Write    admin
+    sleep    1
+    Telnet.Read Until    Password:
+    Telnet.Write    password
+    sleep    1
+    Telnet.Set Prompt    >
+    Telnet.Read Until Prompt
+
+downloadConf
+    [Arguments]    ${username}    ${password}    ${ip}    ${file}    ${time}
+    Telnet.write    import exp ftp ftp://${username}:${password}@${ip}/${file}
+    sleep    20
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    Import succeed
+    run keyword if    '${result}' == 'PASS'    log to console    Import successfully!!
+    ...    ELSE    log to console    Import faild!!
+    sleep    ${time}
+
+cli-login-firewall
+    [Arguments]    ${ip}    ${port}
+    Telnet.Open Connection    ${ip}    port=${port}
+    sleep    3
+    Telnet.Login    root    123456
+    sleep    5
+    Telnet.write    \r
+    sleep    5
+    ${rtn}    Telnet.read
+    ${error}=    check_if_contain    ${rtn}    ->
+    Run keyword if    ${error} == 1    ->exit
+    sleep    2
+    Telnet.write    \r
+    ${rtn0}    Telnet.read
+    ${b}=    check_if_contain    ${rtn0}    --more--
+    Run keyword if    ${b} == 1    Telnet.Write Bare    q
+    sleep    2
+    Telnet.write    \r
+    sleep    2
+    ${rtn1}    Telnet.read
+    ${a}=    check_if_contain    ${rtn1}    User:
+    Run keyword if    ${a} == 1    login firewall
+    ...    ELSE    exit_to_>
+    Telnet.write    configure terminal
+    sleep    3
+    ${rtn}    Telnet.read
+    ${a}=    check_if_contain    ${rtn}    [no]:
+    Run keyword if    ${a} == 1    Telnet.write    yes
+    ...    ELSE    sleep    1
+    sleep    2
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+
+importConf
+    [Arguments]    ${confname}
+    ${console_ip}    ${console_port}    get_consoleInfo    ${type}
+    ${Path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${file}    evaluate    '${log_location}'+'/'+'${Path}'+'/'+'${confname}'
+    cli-login-firewall    ${console_ip}    ${console_port}
+    downloadConf    ${ftp_username}    ${ftp_password}    ${ftpServer_ip}    ${file}    300
+
+exit_to_>
+    : FOR    ${i}    INRANGE    9
+    \    Telnet.write    \r
+    \    sleep    3
+    \    ${rtn}    Telnet.read
+    \    ${a1}=    check_if_contain    ${rtn}    >
+    \    Run keyword if    ${a1} == 1    exit for loop
+    \    ...    ELSE    Telnet.write    cancel
+
+capacityTest
+
+vlan_case
+    [Arguments]    ${type}
+    ${ipstr}    get_ipstr    ${script_location}    ${type}
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    importOrigConf    ${type}
+    post_VLAN    ${ipstr}    ${script_location}    1    52
+    ${casename}    set variable    vlan
+    ${filename_exp}    set variable    ${log_location}/${type}-${casename1}.exp
+    ${filename_tsr}    set variable    ${log_location}/${type}-${casename1}.wri
+    export_config    ${ipstr}    ${filename_exp}
+    export_tsr    ${ipstr}    ${filename_tsr}
+    Comment    post_VLAN    ${ipstr}    ${script_location}    1    200
+    Comment    post_AddressObject    ${ipstr}    ${sn}    ${en}
+    Comment    post_ServiceObject    ${ipstr}    ${sn}    ${en}
+    Comment    post_TunnelInterface    ${ipstr}    ${sn}    ${en}
+    Comment    post_AccessRules    ${ipstr}    61    66
+    Comment    post_vpn_pol_site2site    ${ipstr}    1    5
+    Comment    post_DosPolicy    ${ipstr}    1    6000
+    Comment    post_DosPolicy_250    ${ipstr}    251    500
+    Comment    post_vpn_pol_forPraveen    ${ipstr}    25    50
+    Comment    post_BotnetFilter    ${ipstr}    1    10
+    Comment    post_GeoIPFilter    ${ipstr}    1    10
+    Comment    post_RestAPIAgents    ${ipstr}    1    10
+    Comment    post_LocalUser    ${ipstr}    ${script_location}    1    251
+    Comment    post_TunnelInterface    ${ipstr}    ${script_location}    1    50
+
+exportConf
+    [Arguments]    ${conf_name}
+    ${ipstr}    get_ipstr    ${script_location}    ${type}
+    api_login    ${ipstr}
+    set_configMode    ${ipstr}
+    ${filename}    set variable    ${log_location}/${type}-Cap-${version}/${type}-${conf_name}-${version}.exp
+    ${filename1}    set variable    ${log_location}/${type}-Cap-${version}/${type}-${conf_name}-${version}.wri
+    export_config    ${ipstr}    ${filename}
+    export_tsr    ${ipstr}    ${filename1}
+
+importOrigConf
+    ${orig_conf}    set variable    ${type}-orig-${version}.exp
+    importConf    ${orig_conf}
+
+CreateTargetCSV
+    ##copy product matrix to the related folder##
+    ${desPath}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${desFolder}    evaluate    '${log_location}'+'/'+'${desPath}'
+    ${sourceFile}    evaluate    '${productMatrix_path}'+'/'+'${type}_productMatrix.csv'
+    ${desFile}    evaluate    '${desFolder}'+'/'+'${type}_${version}_TSR.csv'
+    copyfile    ${sourceFile}    ${desFile}
+    ##convert csv file to xlsx file##
+    csv to xlsx    ${desFolder}    ${type}_${version}_TSR
+    log to console    Get product matrix successfully!
+
+get_target_fromCSV
+    [Arguments]    ${test_case}
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${log_location}'+'/'+'${path}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    @{data}=    read tsr csvfile    ${folder}    ${csv_name}.csv
+    ${target_value}    evaluate    int(${data[0]["${test_case}"]})
+    [Return]    ${target_value}
+
+get_target_file
+    ${folder}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${path}    evaluate    '${log_location}'+'/'+'${folder}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    [Return]    ${path}    ${csv_name}
+
+CLI-noItems
+    [Arguments]    ${ip}    ${port}    ${item}
+    CLI-login-firewall    ${ip}    ${port}
+    Telnet.write    ${item}
+    sleep    10
+    Telnet.write    commit
+    sleep    30
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+    Telnet.write    ping 10.7.3.254
+    sleep    2
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    run keyword if    '${result}' == 'FAIL'    Log to console    Failed ping after no items! Can't ping gateway 10.7.3.254 successfully!
+
+get_currentvalue_and_targetvalue
+    [Arguments]    ${ip}    ${port}    ${show_name}
+    CLI-login-firewall    ${ip}    ${port}
+    Telnet.write    show tech-support-report ${show_name}
+    sleep    20
+    ${tsr_o}    Telnet.read
+    ${current_value}    get tsr value    ${tsr_o}    Number of objects:\\s+(\\d+)
+    ${max_value}    get tsr value    ${tsr_o}    Max objects:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    [Return]    ${current_value}    ${max_value}
+
+get_tsr_value
+    [Arguments]    ${result}    ${item}
+    ${result1}    ${pvid}    Should Match Regexp    ${result}    ${item}
+    [Return]    ${pvid}
+
+factory_default_configure
+    #Factory Default
+    Comment    log to console    Factory default!
+    Comment    ${console_ip}    ${console_port}    get_consoleInfo    ${type}
+    Comment    CLI-login-firewall    ${console_ip}    ${console_port}
+    Comment    Telnet.Write    restore-defaults
+    Comment    sleep    1
+    Comment    Telnet.Set Prompt    [cancel]:
+    Comment    sleep    1
+    Comment    Telnet.Read Until Prompt
+    Comment    Telnet.Write    yes
+    Comment    sleep    400
+    #Set IP Address
+    CLI-config_wan_ip
+
+CLI-config_wan_ip
+    [Documentation]    配置wan侧的ip地址，网关，使盒子可以网页访问
+    ###获取盒子相关数据##
+    @{data}=    Capacity.read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###串口下完成测试相关配置####
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    tel    interface x1
+    sleep    1
+    tel    ip-assignment WAN static
+    sleep    1
+    tel    ip ${data[0]["HOST_IP"]} netmask ${data[0]["NETMASK"]}
+    sleep    1
+    tel    gateway ${data[0]["GATEWAY"]}
+    sleep    1
+    tel    dns primary 10.190.202.200
+    sleep    1
+    tel    commit
+    sleep    2
+    tel    exit
+    sleep    1
+    tel    management https
+    sleep    1
+    tel    management ping
+    sleep    1
+    tel    commit
+    sleep    2
+    tel    exit
+
+tel
+    [Arguments]    ${command}    @{rest}
+    [Documentation]    telnet配置命令行 并返回回显.回显中如果有Error提示，返回执行失败。
+    ${rtn}    Execute Command Ex    ${command}    @{rest}
+    ${Error}    evaluate    '''${rtn}'''.find('Error')
+    run keyword if    ${Error} != -1    FAIL    命令行执行失败！！
+    [Return]    ${rtn}

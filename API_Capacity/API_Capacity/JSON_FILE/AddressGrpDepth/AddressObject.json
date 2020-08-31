@@ -1,0 +1,14 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "AO_ForGrpDepth",
+                "zone": "LAN",
+                "network": {
+                    "subnet": "210.1.1.0",
+                    "mask": "255.255.255.0"
+                }
+            }
+        }
+    ]
+}

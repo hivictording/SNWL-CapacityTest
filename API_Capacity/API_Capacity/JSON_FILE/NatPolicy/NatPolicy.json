@@ -1,0 +1,37 @@
+{
+    "nat_policies": [
+        {
+            "ipv4": {
+                "name": "Custom_NAT_Policy",
+                "enable": true,
+                "comment": "",
+                "dns_doctoring": false,
+                "inbound": "any",
+                "outbound": "any",
+                "source": {
+                    "name": "source-1"
+                },
+                "translated_source": {
+                    "original": true
+                },
+                "destination": {
+                    "name": "ori_dst"
+                },
+                "translated_destination": {
+                    "name": "tra_dst"
+                },
+                "service": {
+                    "any": true
+                },
+                "translated_service": {
+                    "original": true
+                },
+                "ticket": {
+                    "tag1": "",
+                    "tag2": "",
+                    "tag3": ""
+                }
+            }
+        }
+    ]
+}

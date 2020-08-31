@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "src-1",
+                "zone": "LAN",
+                "host": {
+                    "ip": "50.0.1.4"
+                }
+            }
+        }
+    ]
+}

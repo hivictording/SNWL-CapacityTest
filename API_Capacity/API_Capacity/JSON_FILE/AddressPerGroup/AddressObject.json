@@ -1,0 +1,11 @@
+{
+  "address_objects": [
+    {
+      "ipv4": {
+        "name": "addrobj",
+        "zone": "LAN",
+        "host": {"ip":"82.1.2.3"}
+      }
+    }
+  ]
+}

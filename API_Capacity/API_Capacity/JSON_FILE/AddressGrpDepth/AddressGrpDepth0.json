@@ -1,0 +1,16 @@
+{
+    "address_groups": [
+        {
+            "ipv4": {
+                "name": "Address_Grp_Depth1",
+                "address_object": {
+                    "ipv4": [
+                        {
+                            "name": "AO_ForGrpDepth"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

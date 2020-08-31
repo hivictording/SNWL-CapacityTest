@@ -1,0 +1,39 @@
+{
+    "route_policies": [
+        {
+            "ipv4": {
+                "interface": "X1",
+                "metric": 20,
+                "source": {
+                    "any": true
+                },
+                "destination": {
+                    "name": "www.ng6s5.com"
+                },
+                "service": {
+                    "any": true
+                },
+                "gateway": {
+                    "name": "X1 IP"
+                },
+                "tos": "0x00",
+                "mask": "0x00",
+                "distance": {
+                    "auto": true
+                },
+                "name": "",
+                "type": "standard",
+                "priority": 16,
+                "comment": "",
+                "disable_on_interface_down": true,
+                "vpn_precedence": false,
+                "probe": "",
+                "ticket": {
+                    "tag1": "",
+                    "tag2": "",
+                    "tag3": ""
+                }
+            }
+        }
+    ]
+}

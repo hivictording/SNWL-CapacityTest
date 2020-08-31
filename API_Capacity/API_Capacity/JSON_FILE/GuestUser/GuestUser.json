@@ -1,0 +1,31 @@
+{
+    "user": {
+        "guest": {
+            "user": [
+                {
+                    "name": "guest2",
+                    "comment": "Auto-Generated",
+                    "password": "password",
+                    "enable": true,
+                    "activate_on_login": false,
+                    "login_uniqueness": true,
+                    "prune_on_expiry": true,
+                    "account_lifetime": {
+                        "days": 7
+                    },
+                    "quota_cycle": {},
+                    "session_lifetime": {
+                        "hours": 1
+                    },
+                    "idle_timeout": {
+                        "minutes": 10
+                    },
+                    "limit": {
+                        "receive": 0,
+                        "transmit": 0
+                    }
+                }
+            ]
+        }
+    }
+}

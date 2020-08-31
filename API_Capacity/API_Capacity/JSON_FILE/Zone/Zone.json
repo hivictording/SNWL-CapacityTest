@@ -1,0 +1,16 @@
+{
+    "zones": [
+        {
+            "name": "Zone_Publick_2",
+            "uuid": "00000000-0000-0002-0a00-00401034f159",
+            "security_type": "public",
+            "client": {
+                "anti_virus": false
+            },
+            "create_group_vpn": false,
+            "ssl_control": false,
+            "sslvpn_access": false,
+            "guest_services": {}
+        }
+    ]
+}

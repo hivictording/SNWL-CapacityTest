@@ -1,0 +1,42 @@
+{
+    "dhcp_server": {
+        "ipv4": {
+            "scope": {
+                "dynamic": [
+                    {
+                        "from": "17.10.0.13",
+                        "to": "17.10.0.13",
+                        "enable": true,
+                        "lease_time": 1440,
+                        "default_gateway": "17.1.1.1",
+                        "netmask": "255.0.0.0",
+                        "comment": "",
+                        "allow_bootp": false,
+                        "domain_name": "",
+                        "dns": {
+                            "server": {
+                                "inherit": true
+                            }
+                        },
+                        "wins": {
+                            "primary": "0.0.0.0",
+                            "secondary": "0.0.0.0"
+                        },
+                        "call_manager": {
+                            "primary": "",
+                            "secondary": "",
+                            "tertiary": ""
+                        },
+                        "network_boot": {
+                            "next_server": "0.0.0.0",
+                            "boot_file": "",
+                            "server_name": ""
+                        },
+                        "generic_option": {},
+                        "always_send_option": true
+                    }
+                ]
+            }
+        }
+    }
+}

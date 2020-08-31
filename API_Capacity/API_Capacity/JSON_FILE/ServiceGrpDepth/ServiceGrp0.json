@@ -1,0 +1,12 @@
+{
+    "service_groups": [
+        {
+            "name": "Service_Grp_Depth0",
+            "service_group": [
+                {
+                    "name": "ICMP"
+                }
+            ]
+        }
+    ]
+}

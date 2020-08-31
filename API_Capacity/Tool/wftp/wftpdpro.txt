@@ -1,0 +1,62 @@
+Texas Imperial Software, maker of WFTPD Server, is proud to announce the release
+of WFTPD Pro Server version 3.25 for Microsoft Windows.  WFTPD Pro Server has
+the same features that have made WFTPD Server one of the top-selling FTP servers
+since 1993, including:
+
++ Full implementation of required features of FTP standard, as specified in
+  the internet RFCs 959 and 1123.  Implementation of many features proposed
+  in draft RFCs (SIZE, MDTM, STREAM-based resume, new security features, etc)
++ Can be run on non-standard ports, on any or all IP addresses in use.
++ Access to UNC-based remote file names, and to shortcut links (LNK files).
+  
++ Individually enable / disable anonymous access, anonymous uploads or all
+  uploads.
++ Configurable messages displayed to user on greeting / farewell, including
+  "Magic Cookies" (e.g. "Hello Eric, the time is now 12:35:10 - thank you for
+  logging in from site fish.example.com")
++ Configurable maximum number of connected users and time-out on idle
+  connections
+
++ Permit access based on user-name/password, and user's host/network
+  address.
++ Rights assigned on a per-user, per-directory basis
++ Encrypted password database, using Unix standard encryption
++ Users can be restricted to their home directory and below (chroot), or
+  allowed to access other drives and directories.
+
++ On-line help
++ View connected users and their actions - disconnect unruly ones
++ Supports Unix 'ls' options - useful for allowing mirror sites.
+
+In addition, WFTPD Pro Server includes the following exciting new features:
+
++ Supports authentication and encryption using the Internet standard
+  security protocols SSL and TLS.
++ Works on existing WFTPD engine to take advantage of its unparalleled
+  speed, security and stability - has been in use at thousands of sites for
+  several years
++ Supports authentication based on the Windows Security database, as well
+  as its own native format.
++ Runs natively as a Windows XP / 2000 / NT service
++ Full context-sensitive help
++ Convert from one or more existing WFTPD installations to one WFTPD Pro
+  installation, that can easily handle multiple "virtual" hosts
++ One control panel dialog allows you to administer multiple virtual hosts
++ Each virtual host can be restricted to a path as a whole
++ Use is made of new style controls (list views, etc) for a more modern
+  look
++ File conversions may be specified - e.g. allowing a user to fetch a file
+  as a ZIP file, without having to store it as a ZIP file.
++ Remote administration through the FTP control connection (allowing you to
+  script common administration tasks), including the ability to stop and
+  start the server remotely.
++ Full install and uninstall procedure for Windows
+
+WFTPD Pro Server is available to existing registered users of WFTPD Server 
+for $119 (limit of one discounted copy of WFTPD Pro for each copy of WFTPD 
+Server you have purchased), and to others at a price of $139 per copy.  To
+order WFTPD Pro Server, or for pricing information for 10 or more copies of
+WFTPD Pro Server, please contact Deborah Jones at email address
+sales@texis.com, or at phone/fax number (425) 806 1787, 9am-5pm Pacific
+Time.  The address for Texas Imperial Software is 23921 57th Ave SE,
+Woodinville, WA 98072

@@ -1,0 +1,24 @@
+{
+    "scheduler": {
+        "schedule": [
+            {
+                "name": "schedule1",
+                "occurs": {
+                    "recurring": {
+                        "recurring": [
+                            {
+                                "start": "08:00",
+                                "end": "17:00",
+                                "mon": true,
+                                "tue": true,
+                                "wed": true,
+                                "thu": true,
+                                "fri": true
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+}

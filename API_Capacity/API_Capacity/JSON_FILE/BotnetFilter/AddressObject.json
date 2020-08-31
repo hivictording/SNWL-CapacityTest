@@ -1,0 +1,11 @@
+{
+  "address_objects": [
+    {
+      "ipv4": {
+        "name": "botaddr",
+        "zone": "WAN",
+        "host": {"ip":"92.1.1.1"}
+      }
+    }
+  ]
+}

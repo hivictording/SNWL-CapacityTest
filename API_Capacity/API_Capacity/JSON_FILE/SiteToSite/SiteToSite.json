@@ -1,0 +1,87 @@
+{
+    "vpn": {
+        "policy": [
+            {
+                "ipv4": {
+                    "site_to_site": {
+                        "name": "VPNPeer_2",
+                        "enable": true,
+                        "gateway": {
+                            "primary": "7.2.1.2",
+                            "secondary": "0.0.0.0"
+                        },
+                        "auth_method": {
+                            "shared_secret": {
+                                "shared_secret": "sonicwall2010",
+                                "ike_id": {
+                                    "local": {
+                                        "ipv4": "0.0.0.0"
+                                    },
+                                    "peer": {
+                                        "ipv4": "0.0.0.0"
+                                    }
+                                }
+                            }
+                        },
+                        "network": {
+                            "local": {
+                                "name": "X6 Subnet"
+                            },
+                            "remote": {
+                                "destination_network": {
+                                    "name": "ixia_2"
+                                }
+                            }
+                        },
+                        "proposal": {
+                            "ike": {
+                                "exchange": "ikev2",
+                                "encryption": "aes-128",
+                                "authentication": "sha-1",
+                                "dh_group": "2",
+                                "lifetime": 28800
+                            },
+                            "ipsec": {
+                                "protocol": "esp",
+                                "encryption": {
+                                    "aes_128": true
+                                },
+                                "authentication": {
+                                    "sha_1": true
+                                },
+                                "perfect_forward_secrecy": {},
+                                "lifetime": 28800
+                            }
+                        },
+                        "netbios": false,
+                        "anti_replay": true,
+                        "multicast": false,
+                        "management": {
+                            "https": false,
+                            "ssh": false,
+                            "snmp": false
+                        },
+                        "keep_alive": false,
+                        "user_login": {
+                            "http": false,
+                            "https": false
+                        },
+                        "default_lan_gateway": "0.0.0.0",
+                        "bound_to": {
+                            "zone": "WAN"
+                        },
+                        "suppress_trigger_packet": true,
+                        "accept_hash": false,
+                        "send_hash": "",
+                        "suppress_auto_add_rule": false,
+                        "apply_nat": false,
+                        "translated_network": {
+                            "local": {},
+                            "remote": {}
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

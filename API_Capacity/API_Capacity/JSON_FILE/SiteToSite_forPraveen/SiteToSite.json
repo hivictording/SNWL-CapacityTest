@@ -1,0 +1,89 @@
+{
+    "vpn": {
+        "policy": [
+            {
+                "ipv4": {
+                    "site_to_site": {
+                        "name": "ppnm20",
+                        "enable": true,
+                        "gateway": {
+                            "primary": "100.1.1.21",
+                            "secondary": "0.0.0.0"
+                        },
+                        "auth_method": {
+                            "shared_secret": {
+                                "shared_secret": "sonicwall",
+                                "ike_id": {
+                                    "local": {
+                                        "domain_name": "Lppnm20.com"
+                                    },
+                                    "peer": {
+                                        "domain_name": "Rppnm20.com"
+                                    }
+                                }
+                            }
+                        },
+                        "network": {
+                            "local": {
+                                "group": "Lgrp20"
+                            },
+                            "remote": {
+                                "destination_network": {
+                                    "name": "10.1.1.0/24"
+                                }
+                            }
+                        },
+                        "proposal": {
+                            "ike": {
+                                "exchange": "aggressive",
+                                "encryption": "triple-des",
+                                "authentication": "sha-1",
+                                "dh_group": "2",
+                                "lifetime": 7200
+                            },
+                            "ipsec": {
+                                "protocol": "esp",
+                                "encryption": {
+                                    "triple_des": true
+                                },
+                                "authentication": {
+                                    "sha_1": true
+                                },
+                                "perfect_forward_secrecy": {
+                                    "dh_group": "1"
+                                },
+                                "lifetime": 7200
+                            }
+                        },
+                        "netbios": false,
+                        "anti_replay": true,
+                        "permit_acceleration": false,
+                        "multicast": false,
+                        "management": {
+                            "https": false,
+                            "ssh": false,
+                            "snmp": false
+                        },
+                        "keep_alive": true,
+                        "allow_sonicpointn_layer3": false,
+                        "user_login": {
+                            "http": false,
+                            "https": false
+                        },
+                        "default_lan_gateway": "0.0.0.0",
+                        "bound_to": {
+                            "interface": "X1"
+                        },
+                        "suppress_auto_add_rule": false,
+                        "require_xauth": "",
+                        "apply_nat": false,
+                        "translated_network": {
+                            "local": {},
+                            "remote": {}
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

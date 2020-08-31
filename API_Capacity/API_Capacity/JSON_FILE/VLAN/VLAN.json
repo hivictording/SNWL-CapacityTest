@@ -1,0 +1,40 @@
+{
+  "interfaces": [
+    {
+            "ipv4": {
+                "name": "X0",
+                "vlan": 2,
+                "ip_assignment": {
+                    "zone": "LAN",
+                    "mode": {
+                        "static": {
+                            "ip": "57.3.2.4",
+                            "netmask": "255.255.255.0",
+                            "gateway": "0.0.0.0"
+                        }
+                    }
+                },
+                "comment": "",
+                "management": {
+                    "https": false,
+                    "ping": false,
+                    "snmp": false,
+                    "ssh": false
+                },
+                "user_login": {
+                    "http": false,
+                    "https": false
+                },
+                "mac": {
+                    "default": true
+                },
+                "flow_reporting": true,
+                "multicast": false,
+                "exclude_route": false,
+                "asymmetric_route": false,
+                "routed_mode": {},
+                "mtu": 1500
+            }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+    "vpn": {
+        "policy": [
+            {
+                "ipv4": {
+                    "site_to_site": {
+                        "name": "m_vpn2",
+                        "enable": true,
+                        "gateway": {
+                            "primary": "17.10.100.2"
+                        },
+                        "auth_method": {
+                            "manual_key": true
+                        },
+                        "network": {
+                            "local": {
+                                "group": "Phase2_group"
+                            },
+                            "remote": {
+                                "destination_network": {
+                                    "name": "m_remote2"
+                                }
+                            }
+                        },
+                        "proposal": {
+                            "ipsec": {
+                                "protocol": "esp",
+                                "encryption": {
+                                    "aes_128": true
+                                },
+                                "authentication": {
+                                    "md5": true
+                                },
+                                "in_spi": "0x3ea",
+                                "out_spi": "0x232a",
+                                "encryption_key": "11111111111111111111111111111111",
+                                "authentication_key": "11111111111111111111111111111111"
+                            }
+                        },
+                        "netbios": false,
+                        "management": {
+                            "https": false,
+                            "ssh": false,
+                            "snmp": false
+                        },
+                        "user_login": {
+                            "http": false,
+                            "https": false
+                        },
+                        "default_lan_gateway": "0.0.0.0",
+                        "bound_to": {
+                            "interface": "X1"
+                        },
+                        "suppress_auto_add_rule": true,
+                        "apply_nat": false,
+                        "translated_network": {
+                            "local": {},
+                            "remote": {}
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}
