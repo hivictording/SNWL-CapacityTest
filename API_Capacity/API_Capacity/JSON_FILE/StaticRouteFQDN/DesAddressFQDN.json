@@ -1,0 +1,12 @@
+{
+    "address_objects": [
+        {
+            "fqdn": {
+                "name": "www.ng6s3.com",
+                "zone": "VPN",
+                "domain": "www.ng6s3.com",
+                "dns_ttl": 8866
+            }
+        }
+    ]
+}

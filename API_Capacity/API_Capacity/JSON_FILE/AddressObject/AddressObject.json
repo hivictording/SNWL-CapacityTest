@@ -1,0 +1,11 @@
+{
+  "address_objects": [
+    {
+      "ipv4": {
+        "name": "test1",
+        "zone": "LAN",
+        "host": {"ip":"134.1.1.1"}
+      }
+    }
+  ]
+}

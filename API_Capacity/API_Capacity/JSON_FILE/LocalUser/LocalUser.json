@@ -1,0 +1,30 @@
+{
+    "user": {
+        "local": {
+            "user": [
+                {
+                    "name": "test2",
+                    "display_name": "test2",
+                    "password": "sonicwall2010",
+                    "force_password_change": false,
+                    "account_lifetime": {},
+                    "one_time_password": {},
+                    "quota_cycle": {},
+                    "session_lifetime": {},
+                    "limit": {
+                        "receive": 0,
+                        "transmit": 0
+                    },
+                    "member_of": [
+                        {
+                            "name": "Trusted Users"
+                        },
+                        {
+                            "name": "Everyone"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

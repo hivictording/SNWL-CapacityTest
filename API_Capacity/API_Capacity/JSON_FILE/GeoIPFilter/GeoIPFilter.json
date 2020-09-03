@@ -1,0 +1,13 @@
+{
+    "geo_ip": {
+        "custom_list": {
+            "address": [
+                {
+                    "name": "addrobj5",
+                    "country": "Albania",
+                    "comment": ""
+                }
+            ]
+        }
+    }
+}

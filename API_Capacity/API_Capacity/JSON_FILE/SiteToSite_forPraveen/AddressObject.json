@@ -1,0 +1,14 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "9.1.150.0",
+                "zone": "LAN",
+                "network": {
+                    "subnet": "9.1.150.0",
+                    "mask": "255.255.255.0"
+                }
+            }
+        }
+    ]
+}

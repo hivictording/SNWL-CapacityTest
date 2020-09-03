@@ -1,0 +1,12 @@
+{
+    "service_groups": [
+        {
+            "name": "servgrps2",
+            "service_group": [
+                {
+                    "name": "Citrix"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,58 @@
+{
+    "vpn": {
+        "policy": [
+            {
+                "ipv4": {
+                    "group_vpn": {
+                        "name": "Group_VPN_Pol_3",
+                        "enable": false,
+                        "auth_method": {
+                            "shared_secret": {
+                                "shared_secret": "sonicwall2010"
+                            }
+                        },
+                        "proposal": {
+                            "ike": {
+                                "encryption": "triple-des",
+                                "authentication": "sha-1",
+                                "dh_group": "2",
+                                "lifetime": 28800
+                            },
+                            "ipsec": {
+                                "protocol": "esp",
+                                "encryption": {
+                                    "triple_des": true
+                                },
+                                "authentication": {
+                                    "sha_1": true
+                                },
+                                "perfect_forward_secrecy": {},
+                                "lifetime": 28800
+                            }
+                        },
+                        "anti_replay": true,
+                        "multicast": false,
+                        "management": {
+                            "https": false,
+                            "ssh": false,
+                            "snmp": false
+                        },
+                        "accept_multiple_proposals": false,
+                        "default_lan_gateway": "0.0.0.0",
+                        "client": {
+                            "cache_xauth": "never",
+                            "virtual_adaptor": "none",
+                            "allow_connections_to": "split-tunnels",
+                            "default_route": {},
+                            "simple_provisioning": false
+                        },
+                        "client_authentication": {
+                            "require_xauth": "Trusted Users"
+                        },
+                        "ike_mode_configuration": {}
+                    }
+                }
+            }
+        ]
+    }
+}

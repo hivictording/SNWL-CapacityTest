@@ -1,0 +1,9 @@
+{
+    "service_objects": [
+        {
+            "name": "SERVICE_OBJ_4",
+            "uuid": "00000000-0000-0204-0300-00401034f159",
+            "ospf": "none"
+        }
+    ]
+}

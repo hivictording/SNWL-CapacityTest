@@ -1,0 +1,7 @@
+*** Variables ***
+${type}           TZ-470
+${sn}             1
+${en}             128
+${step}           1
+${casename}       VLAN    # TunnelInterface
+${version}        7.0.0-P415

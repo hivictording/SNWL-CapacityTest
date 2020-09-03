@@ -1,0 +1,37 @@
+{
+    "dos_policies": [
+        {
+            "uuid": "00000000-0000-0006-1d00-00401034f159",
+            "name": "DosPol_1",
+            "priority": {
+                "manual": 1
+            },
+            "enable": true,
+            "comment": "DosPol_1",
+            "destination": {
+                "address": {
+                    "name": "des-1"
+                }
+            },
+            "source": {
+                "address": {
+                    "name": "src-1"
+                }
+            },
+            "ip_version": "ipv4",
+            "service": {
+                "name": "FTP"
+            },
+            "schedule": {
+                "always_on": true
+            },
+            "action": "protect",
+            "action_profile": "Default DoS Action Profile",
+            "ticket": {
+                "tag1": "",
+                "tag2": "",
+                "tag3": ""
+            }
+        }
+    ]
+}

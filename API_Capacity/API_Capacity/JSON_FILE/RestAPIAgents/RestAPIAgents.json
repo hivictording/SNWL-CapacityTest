@@ -1,0 +1,22 @@
+{
+    "user": {
+        "sso": {
+            "third_party_api": {
+                "client": [
+                    {
+                        "host": "172.1.1.5",
+                        "enable": true,
+                        "authentication_type": "shared-secret",
+                        "shared_secret": "sonicwall2010",
+                        "security_level": {
+                            "high": "allow-all"
+                        },
+                        "replay_prevention": false,
+                        "origin_restriction": {},
+                        "persistent_connections": false
+                    }
+                ]
+            }
+        }
+    }
+}

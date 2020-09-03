@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "tb_gw",
+                "zone": "LAN",
+                "host": {
+                    "ip": "4.1.1.1"
+                }
+            }
+        }
+    ]
+}

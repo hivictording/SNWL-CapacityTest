@@ -1,0 +1,73 @@
+{
+    "vpn": {
+        "policy": [
+            {
+                "ipv4": {
+                    "tunnel_interface": {
+                        "name": "test3",
+                        "enable": true,
+                        "gateway": {
+                            "primary": "10.2.0.3"
+                        },
+                        "auth_method": {
+                            "shared_secret": {
+                                "shared_secret": "sonicwall2010",
+                                "ike_id": {
+                                    "local": {
+                                        "ipv4": "0.0.0.0"
+                                    },
+                                    "peer": {
+                                        "ipv4": "0.0.0.0"
+                                    }
+                                }
+                            }
+                        },
+                        "proposal": {
+                            "ike": {
+                                "exchange": "ikev2",
+                                "encryption": "triple-des",
+                                "authentication": "sha-1",
+                                "dh_group": "2",
+                                "lifetime": 28800
+                            },
+                            "ipsec": {
+                                "protocol": "esp",
+                                "encryption": {
+                                    "triple_des": true
+                                },
+                                "authentication": {
+                                    "sha_1": true
+                                },
+                                "perfect_forward_secrecy": {},
+                                "lifetime": 28800
+                            }
+                        },
+                        "netbios": false,
+                        "anti_replay": true,
+						"permit_acceleration": false,
+                        "multicast": false,
+                        "management": {
+                            "https": false,
+                            "ssh": false,
+                            "snmp": false
+                        },
+                        "keep_alive": true,
+						"allow_sonicpointn_layer3": false,
+                        "user_login": {
+                            "http": false,
+                            "https": false
+                        },
+                        "bound_to": {
+                            "interface": "X0"
+                        },
+                        "suppress_trigger_packet": false,
+                        "accept_hash": false,
+                        "send_hash": "",
+						"apply_nat": false,
+                        "advanced_routing": false
+                    }
+                }
+            }
+        ]
+    }
+}

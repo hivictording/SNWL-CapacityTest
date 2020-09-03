@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "des_ao",
+                "zone": "WAN",
+                "host": {
+                    "ip": "2.2.2.10"
+                }
+            }
+        }
+    ]
+}

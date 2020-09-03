@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "ori_dst",
+                "zone": "WAN",
+                "host": {
+                    "ip": "9.2.2.10"
+                }
+            }
+        }
+    ]
+}

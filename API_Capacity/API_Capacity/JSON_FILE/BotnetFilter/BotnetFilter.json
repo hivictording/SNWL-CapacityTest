@@ -1,0 +1,13 @@
+{
+    "botnet": {
+        "custom_list": {
+            "address": [
+                {
+                    "name": "botaddrobj1",
+                    "enable": true,
+                    "comment": ""
+                }
+            ]
+        }
+    }
+}

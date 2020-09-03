@@ -1,0 +1,39 @@
+{
+    "route_policies": [
+        {
+            "ipv4": {
+                "interface": "X3",
+                "metric": 1,
+                "source": {
+                    "name": "src-1"
+                },
+                "destination": {
+                    "name": "des_ao"
+                },
+                "service": {
+                    "any": true
+                },
+                "gateway": {
+                    "name": "tb_gw"
+                },
+                "tos": "0x00",
+                "mask": "0x00",
+                "distance": {
+                    "auto": true
+                },
+                "name": "Route1",
+                "type": "standard",
+                "priority": 5,
+                "comment": "",
+                "disable_on_interface_down": false,
+                "vpn_precedence": false,
+                "probe": "",
+                "ticket": {
+                    "tag1": "",
+                    "tag2": "",
+                    "tag3": ""
+                }
+            }
+        }
+    ]
+}

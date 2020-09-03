@@ -1,0 +1,42 @@
+Texas Imperial Software is proud to announce version 3.25 of its basic FTP
+server product, WFTPD Server for Microsoft Windows.
+
+As an FTP server, WFTPD Server allows you to turn your Internet-connected 
+Windows computer into an FTP site, accessible to anyone you choose.  WFTPD 
+Server was the first standalone Winsock-compliant FTP server to be released 
+for Windows, and with this release continues its reputation for stability, 
+security, and speed. In addition, we continually extend its feature set to 
+include new commands and behaviours defined by the IETF "FTP extensions" 
+working group.
+
+WFTPD Server's user base is well into the tens of thousands, and since we
+never charge for maintenance or support, the only way we can make money is 
+to sell a product that is easy to use and does not break.  We achieve this 
+by writing code with as little complexity as possible.  This approach 
+results in the additional benefit that the software is fast, and small.
+
+Since WFTPD Server is an RFC-compliant FTP server, there are many features 
+of it that you can rely on being available - upload and download of files, 
+directory listings, support for active and passive data connections, ASCII 
+and binary/image transfer modes, etc.  In addition, we offer security 
+through a user and password database (separate from the NT user database, 
+for greater security of your NT users); configurable logging of commands, 
+warnings, logins, etc; security measures as specified in RFC 2577; 
+restriction of access by IP address and domain name; "chroot jail" - 
+restriction of a user to a directory subtree; frequent internal code reviews 
+and attack simulation; use of long path names on Win32 even when short paths 
+are provided.
+
+Ease of use comes from an interface that logically separates configuration 
+information; on-line help for all aspects of the software; text log files; 
+configurable messages displayed to users on initial connection, logout and 
+directory change; support for the IETF draft commands MLST and MLSD; 'magic 
+cookies' - sequences in messages to be replaced by items such as the 
+client's username, the current time, available disk space, etc.
+
+There are many more features and advantages to WFTPD Server than can be described 
+in this short announcement; additionally, many of our users are interested 
+in even more power, functionality and control, that we can provide them with 
+our "big brother" to WFTPD Server, WFTPD Pro Servre.  For further details on 
+WFTPD Server and WFTPD Pro Server, or for registration instructions and support, 
+please visit our web site at http://www.wftpd.com/

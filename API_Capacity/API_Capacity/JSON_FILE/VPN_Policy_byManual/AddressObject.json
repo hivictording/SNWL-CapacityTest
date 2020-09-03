@@ -1,0 +1,14 @@
+{
+  "address_objects": [
+  {
+    "ipv4": {
+                "name": "m_remote2",
+                "zone": "VPN",
+                "network": {
+                    "subnet": "30.0.2.0",
+                    "mask": "255.255.255.0"
+                }
+    }
+	}
+  ]
+}

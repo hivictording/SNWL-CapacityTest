@@ -1,0 +1,12 @@
+{
+    "service_groups": [
+        {
+            "name": "Service_Grp_Depth4",
+            "service_group": [
+                {
+                    "name": "Service_Grp_Depth3"
+                }
+            ]
+        }
+    ]
+}

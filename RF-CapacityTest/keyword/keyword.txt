@@ -1,0 +1,2859 @@
+*** Settings ***
+
+*** Keywords ***
+tel
+    [Arguments]    ${command}    @{rest}
+    [Documentation]    telnet配置命令行 并返回回显.回显中如果有Error提示，返回执行失败。
+    ${rtn}    Execute Command Ex    ${command}    @{rest}
+    ${Error}    evaluate    '''${rtn}'''.find('Error')
+    run keyword if    ${Error} != -1    FAIL    命令行执行失败！！
+    [Return]    ${rtn}
+
+logout_by_https
+    Select Frame    id=logoFrame
+    sleep    3
+    Click Element    id=logoutLink
+
+login_by_https
+    [Arguments]    ${ip}    ${username}    ${password}    ${webbrowser}
+    Open Browser    https://${ip}    ${webbrowser}
+    sleep    5
+    Select Frame    id=authFrm
+    Clear Element Text    id=userName
+    Input Text    id=userName    admin
+    Clear Element Text    name=pwd
+    Input Password    name=pwd    password
+    ${value}    Get Value    name=pwd
+    Click Button    name=Submit
+    sleep    10
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    This appliance is not registered
+    run keyword if    '${result}' == 'PASS'    Click Element    id=regLaterButt
+    sleep    5
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    OK to preempt existing administrator?
+    run keyword if    '${result}' == 'PASS'    Click Button    name=Continue
+    sleep    1
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Handle Alert    action=ACCEPT
+    sleep    15
+    Unselect Frame
+    ${curr_title}    get window titles
+    ${title}    Get From List    ${curr_title}    0
+    Select Window    title=${title}
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    Click here to log back in
+    run keyword if    '${result}' == 'PASS'    run keywords    Click Element    xpath=//*[@href="auth.html"]
+    ...    AND    log    Need TWO LOGIN
+    ...    AND    twoLogin
+    ${a}    Run Keyword And Return Status    Page Should Contain element    id=authFrm
+    log    ${a}
+    Run keyword if    '${a}'=='False'    run keywords    log    one login
+    ...    AND    sleep    5
+    ...    AND    Select Frame    name=toggleFrame
+    ...    ELSE    run keywords    log    Need TWO LOGIN
+    ...    AND    twoLogin
+
+restart_by_https
+    Select Frame    id=outlookFrame
+    Click Element    id=j1_14_anchor
+    sleep    5
+    Click Element    id=j1_26_anchor
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click Button    Xpath=//input[@class='snwl-btn']
+    Handle Alert    action=ACCEPT
+    sleep    5
+    Page Should Contain    Please wait, the appliance is restarting
+
+Regist_FW_by_https
+    [Arguments]    ${email}    ${pwd}
+    Unselect Frame
+    Select Frame    id=logoFrame
+    Click Link    //*[@id='registerLink']
+    Unselect Frame
+    sleep    60
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    MySonicWall username/email
+    : FOR    ${i}    IN RANGE    6
+    \    run keyword if    '${result}' == 'FAIL'    click registerLink
+    \    sleep    40
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    MySonicWall username/email
+    Select Frame    id=tabFrame
+    Input Text    name=login    ${email}
+    sleep    3
+    Input Text    name=pwd    ${pwd}
+    sleep    3
+    Click Element    name=Submit
+    sleep    30
+    Capture Page Screenshot
+
+click registerLink
+    Unselect Frame
+    Select Frame    id=logoFrame
+    Click Link    //*[@id='registerLink']
+    Unselect Frame
+
+switch to classic mode
+    Select Frame    name=toggleFrame
+    Click Element    id=toggleViewBtn
+    Unselect Frame
+
+login firewall
+    Telnet.Write    admin
+    sleep    1
+    Telnet.Read Until    Password:
+    Telnet.Write    password
+    sleep    1
+    Telnet.Set Prompt    >
+    Telnet.Read Until Prompt
+
+login switch
+    Write    admin
+    sleep    1
+    Read Until    Password:
+    Write    password
+
+exit_to_>
+    : FOR    ${i}    INRANGE    9
+    \    Telnet.write    \r
+    \    sleep    3
+    \    ${rtn}    Telnet.read
+    \    ${a1}=    check_if_contain    ${rtn}    >
+    \    Run keyword if    ${a1} == 1    exit for loop
+    \    ...    ELSE    Telnet.write    cancel
+
+CLI-login-firewall
+    [Arguments]    ${ip}    ${port}
+    [Documentation]    通过串口服务器登陆盒子串口，进入配置模式config(18B1698A2100)#
+    Telnet.Open Connection    ${ip}    port=${port}
+    sleep    3
+    Telnet.Login    root    123456
+    sleep    5
+    Telnet.write    \r
+    sleep    5
+    ${rtn}    Telnet.read
+    ${error}=    check_if_contain    ${rtn}    ->
+    Run keyword if    ${error} == 1    ->exit
+    sleep    2
+    Telnet.write    \r
+    ${rtn0}    Telnet.read
+    ${b}=    check_if_contain    ${rtn0}    --more--
+    Run keyword if    ${b} == 1    Telnet.Write Bare    q
+    sleep    2
+    Telnet.write    \r
+    sleep    2
+    ${rtn1}    Telnet.read
+    ${a}=    check_if_contain    ${rtn1}    User:
+    Run keyword if    ${a} == 1    login firewall
+    ...    ELSE    exit_to_>
+    Telnet.write    configure terminal
+    sleep    3
+    ${rtn}    Telnet.read
+    ${a}=    check_if_contain    ${rtn}    [no]:
+    Run keyword if    ${a} == 1    Telnet.write    yes
+    ...    ELSE    sleep    1
+    sleep    2
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+
+CLI-login-C4006
+    [Arguments]    ${ip}    ${port}
+    [Documentation]    通过串口服务器登陆盒子串口，进入配置模式config(18B1698A2100)#
+    Telnet.Open Connection    ${ip}    port=${port}
+    Telnet.Login    root    123456
+    Telnet.write    \r
+    ${rtn}    Telnet.read
+    ${a}=    check_if_contain    ${rtn}    C4006>
+    Run keyword if    ${a} == 1    Telnet.write    en
+    sleep    1
+    ${rtn}    Telnet.read
+    log    ${rtn}
+    ${b}    check_if_contain    ${rtn}    Password:
+    Run keyword if    ${b} == 1    write    sonicwall
+    sleep    2
+    Comment    write    \r
+    Comment    ${rtn}    read
+    Comment    log    ${rtn}
+    Comment    ${c}    check_if_contain    ${rtn}    (config)#
+    Comment    Run keyword if    ${c} == 1    write    exit
+    Comment    sleep    2
+    write    \r
+    ${rtn}    read
+    ${d}    check_if_contain    ${rtn}    (config-if)#
+    Run keyword if    ${d} == 1    write    exit
+    sleep    1
+    Telnet.write    end
+    sleep    2
+    Telnet.read
+    Telnet.Set Prompt    \#
+    Telnet.write    configure terminal
+    Telnet.Read Until Prompt
+
+Telnet-login-switch
+    [Arguments]    ${ip}
+    [Documentation]    通过串口服务器登陆盒子串口，进入配置模式config(18B1698A2100)#
+    Telnet.Open Connection    ${ip}    port=23
+    Telnet.Login    admin    password    login_prompt=Login:
+    sleep    3
+    Telnet.Set Prompt    \#
+    Telnet.write    configure terminal
+    Telnet.Read Until Prompt
+
+CLI-config_wan_ip
+    [Arguments]    ${port}    ${ip}    ${mask}    ${gateway}
+    [Documentation]    配置wan侧的ip地址，网关，使盒子可以网页访问
+    tel    interface ${port}
+    sleep    1
+    tel    ip-assignment WAN static
+    sleep    1
+    tel    ip ${ip} netmask ${mask}
+    sleep    1
+    tel    gateway ${gateway}
+    sleep    1
+    tel    dns primary 10.190.202.200
+    sleep    1
+    tel    commit
+    sleep    1
+    tel    exit
+    sleep    1
+    tel    management https
+    sleep    1
+    tel    management ping
+    sleep    1
+    tel    commit
+    sleep    1
+    tel    exit
+
+CLI-Factory-Restore
+    [Arguments]    ${sleep_time}
+    [Documentation]    恢复出厂配置
+    Telnet.Write    restore-defaults
+    sleep    1
+    Telnet.Set Prompt    [cancel]:
+    sleep    1
+    Telnet.Read Until Prompt
+    Telnet.Write    yes
+    sleep    ${sleep_time}
+
+CLI-config-Test-LAN-X0
+    [Arguments]    ${port}    ${ip}    ${mask}
+    tel    interface ${port}
+    tel    ip-assignment LAN static
+    tel    ip ${ip} netmask ${mask}
+    tel    commit
+    ${rtn}    Telnet.read
+    ${b}=    check_if_contain    ${rtn}    --more--|--MORE--
+    Run keyword if    ${b} == 1    Telnet.Write Bare    q
+    sleep    1
+    tel    exit
+    tel    management ping
+    tel    user-login http
+    tel    user-login https
+    tel    commit
+    ${rtn0}    Telnet.read
+    ${a}=    check_if_contain    ${rtn0}    --more--|--MORE--
+    Run keyword if    ${a} == 1    Telnet.Write Bare    q
+    sleep    1
+    tel    exit
+
+CLI-config-Test-WAN
+    [Arguments]    ${port}    ${ip}    ${mask}    ${gateway}
+    tel    interface ${port}
+    tel    ip-assignment WAN static
+    tel    ip ${ip} netmask ${mask}
+    tel    gateway ${gateway}
+    tel    commit
+    sleep    1
+    tel    exit
+    tel    management https
+    tel    management ping
+    tel    commit
+    sleep    1
+    tel    exit
+
+CLI-logout
+    Telnet.write    exit
+    sleep    1
+    Telnet.write    exit
+    sleep    1
+
+download firewall version and reboot with factory-default
+    [Arguments]    ${username}    ${password}    ${ip}    ${file}    ${time}
+    Telnet.write    import firmware ftp ftp://${username}:${password}@${ip}/${file}
+    sleep    20
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    uploaded successfully
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    uploaded successfully
+    run keyword if    '${result}' == 'FAIL'    FAIL    download version fail ,timeout!!
+    Telnet.Write    boot uploaded factory-default
+    sleep    1
+    Telnet.Set Prompt    [cancel]:
+    sleep    1
+    Telnet.Read Until Prompt
+    Telnet.Write    yes
+    sleep    ${time}
+
+boot current factory-default
+    [Arguments]    ${time}
+    Telnet.Write    boot current factory-default
+    sleep    1
+    Telnet.Set Prompt    [cancel]:
+    sleep    1
+    Telnet.Read Until Prompt
+    Telnet.Write    yes
+    sleep    ${time}
+    log to console    same version ,no need download !
+
+config S3148
+    [Arguments]    ${type}
+    ###串口登陆3148###
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    ${data[0]["3148-CONSOLEPORT"]}
+    CLI-login-C4006    ${data[0]["3148-CONSOLE_SERVER"]}    ${consoleserver_port}
+    ###配置 3148 PortS###
+    log to console    config 3148 ports!
+    : FOR    ${i}    IN    @{data}
+    \    config_trunkport_switchport    ${i["UNTAG"]}
+    \    ${vlan}    evaluate    int(${i["VLAN"]})
+    \    Comment    write    no interface vlan ${vlan}
+    \    sleep    1
+    \    Comment    Read Until Prompt
+    \    ${result}    tel    do show interfaces switchport ${i["UNTAG"]}
+    \    ${nativlan_id}    get_native_vlan    ${result}    U\\s+(\\d+)
+    \    run keyword if    ${nativlan_id} == ${vlan}    log    the port has already configed
+    \    ...    ELSE IF    ${nativlan_id} == 1    config_native_vlan    ${i["UNTAG"]}    ${vlan}
+    \    ...    ELSE    change_native_vlan    ${i["UNTAG"]}    ${nativlan_id}    ${vlan}
+    \    config_accessport_switchport    Te 1/49    ${vlan}
+    log to console    finish config 3148 switch!
+
+->exit
+    Telnet.write    exit
+    Telnet.write    \r
+
+enable_TLS
+    [Arguments]    ${ip}    ${username}    ${password}    ${webbrowser}
+    login_by_https_TLS    ${ip}    admin    password    firefox
+    ${ww}=    get cookies
+    log    ${ww}
+    log to console    ${ww}
+    goto    https://${ip}/diag.html
+    Unselect Frame
+    sleep    5
+    Select Frame    id=outlookFrame
+    Click Button    xpath = /html/body/table/tbody/tr[1]/td//input
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Execute Javascript    document.getElementById('enTLSCompat').click()
+    Confirm Action
+
+ssh_login_capBed
+    [Arguments]    ${ip}    ${port}=22
+    SSHLibrary.Open Connection    ${ip}    port= ${port}    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/capacityTB/scripts/
+    sleep    1
+
+address_object
+    [Arguments]    ${type}
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${console_ip}    set variable    ${data[0]["HOST_IP"]}
+    ${max}    evaluate    2500
+    ssh_login_capBed    10.7.3.253
+    Set Client Configuration    prompt=#
+    SSHLibrary.Write    cd /root/capacityTB/scripts
+    log many    Run script
+    SSHLibrary.Write    perl /root/capacityTB/bin/capacityInit.pl -fw ${console_ip} -o address-o -n $max
+    Sleep    60
+    SSHLibrary.Close Connection
+
+Config_C4006
+    [Arguments]    ${type}
+    ###telnet登陆C4006####
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${C4006_PORT}    evaluate    ${data[0]["C4006_TELNETPORT"]}
+    CLI-login-C4006    ${data[0]["C4006_IP"]}    ${C4006_PORT}
+    ###配置 C4006 PortS###
+    log to console    config C4006 ports!
+    Comment    ${Uplink}    Set Variable    Fa 5/47
+    : FOR    ${i}    IN    ${data}
+    \    ${vlan}    evaluate    int(${i["VLAN"]})
+    \    ${port}    evaluate    ${i["UNTAG"]}
+    \    config_accessport_switchport    ${port}    ${vlan}
+    log to console    finish config C4006 switch !
+
+Export_Conf
+    [Arguments]    ${username}    ${password}    ${ip}    ${path}    ${file}    ${type}
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    ###导出配置##
+    Telnet.write    export current-config exp ftp ftp://${username}:${password}@${ip}/${path}/${file}
+    sleep    20
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    Upload complete
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    Upload complete
+    run keyword if    '${result}' == 'FAIL'    FAIL    Export config fail ,timeout!!
+
+login_by_https_TLS
+    [Arguments]    ${ip}    ${username}    ${password}    ${webbrowser}
+    Open Browser    https://${ip}    ${webbrowser}
+    sleep    5
+    Select Frame    id=authFrm
+    Clear Element Text    id=userName
+    Input Text    id=userName    admin
+    Clear Element Text    name=pwd
+    Input Password    name=pwd    password
+    ${value}    Get Value    name=pwd
+    Click Button    name=Submit
+    sleep    10
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    This appliance is not registered
+    run keyword if    '${result}' == 'PASS'    Click Element    id=regLaterButt
+    sleep    5
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    OK to preempt existing administrator?
+    run keyword if    '${result}' == 'PASS'    Click Button    name=Continue
+    sleep    1
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Handle Alert    action=ACCEPT
+    sleep    10
+    Unselect Frame
+    ${curr_title}    get window titles
+    ${title}    Get From List    ${curr_title}    0
+    Select Window    title=${title}
+    ${a}    Run Keyword And Return Status    Page Should Contain element    id=authFrm
+    log    ${a}
+    Run keyword if    '${a}'=='False'    run keywords    log    one login
+    ...    AND    Select Frame    name=toggleFrame
+    ...    ELSE    run keywords    log    Need TWO LOGIN
+    ...    AND    twoLogin
+
+ssh_execute_command
+    [Arguments]    ${command}    ${time}    ${type}    ${case_name}
+    SSHLibrary.read
+    log to console    Start to run script!
+    SSHLibrary.write    ${command}
+    read_console_log    ${type}    ${time}    ${case_name}
+    ${rtn}    SSHLibrary.read
+    Comment    ${rtn}=    SSHLibrary.Read Until Regexp    ]#
+    Comment    ${More}=    check_if_contain    ${rtn}    --MORE--
+    Comment    run keyword if    ${More}== 1    SSHLibrary.Write Bare    q
+    Comment    ${Error}=    check_if_contain    ${rtn}    Error
+    Comment    run keyword if    ${Error} == 1    FAIL    命令行执行失败！！
+    ${More}=    check_if_contain    ${rtn}    Content:
+    run keyword if    ${More}== 1    log    Finished running !
+    ...    ELSE    log    Running failed!
+    SSHLibrary.close connection
+
+GetTSR
+    [Arguments]    ${ip}    ${port}    ${type}
+    ### 创建TSR表格###
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    Create TSR file    ${folder}    ${csv_name}.csv
+    ###获取TSR product数据###
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    ${tsr}    Execute Command showALL    show tech-support-report product
+    sleep    20
+    log    ${tsr}
+    ${max_localUser}    get tsr value    ${tsr}    Max Local Users:\\s+(\\d+)
+    ${max_sslVPN}    get tsr value    ${tsr}    max SSLVPN connections:\\s+(\\d+)
+    ${max_userGrp}    get tsr value    ${tsr}    Max User Groups:\\s+(\\d+)
+    ${max_userLogin}    get tsr value    ${tsr}    Max User Logins:\\s+(\\d+)
+    ${max_restAPI_userLogin}    get tsr value    ${tsr}    Max Single Sign On Users:\\s+(\\d+)
+    ${max_restAPI_Agents}    get tsr value    ${tsr}    Max SSO RADIUS Accounting clients:\\s+(\\d+)
+    ${max_accessRules}    get tsr value    ${tsr}    Max Rules Per Table:\\s+(\\d+)
+    ${max_addressobjPerGrp}    get tsr value    ${tsr}    Max Address Objects Per Group:\\s+(\\d+)
+    ${max_serviceobjPerGrp}    get tsr value    ${tsr}    Max Service Objects Per Group:\\s+(\\d+)
+    ${max_scheduleObj}    get tsr value    ${tsr}    Max Total User Schedule Objects:\\s+(\\d+)
+    ${max_zones}    get tsr value    ${tsr}    Max Total Zone Objects:\\s+(\\d+)
+    ${max_natPolicy}    get tsr value    ${tsr}    Max NAT Policies:\\s+(\\d+)
+    ${max_vlan}    get tsr value    ${tsr}    Max virtual interfaces:\\s+(\\d+)
+    ${max_routes}    get tsr value    ${tsr}    Max Static Routes:\\s+(\\d+)
+    ${max_phase1}    get tsr value    ${tsr}    Max Phase1 SAs:\\s+(\\d+)
+    ${max_phase2}    get tsr value    ${tsr}    Max Phase2 SAs:\\s+(\\d+)
+    ${max_guestUser}    get tsr value    ${tsr}    Max Guest Users:\\s+(\\d+)
+    ${max_app_p}    get tsr value    ${tsr}    Max App Firewall policies:\\s+(\\d+)
+    ${max_app_o}    get tsr value    ${tsr}    Max App Firewall Application objs:\\s+(\\d+)
+    ${max_app_a}    get tsr value    ${tsr}    Max App Firewall actions:\\s+(\\d+)
+    ${max_app_e}    get tsr value    ${tsr}    Max App Firewall Email User objs:\\s+(\\d+)
+    ${max_vpn_tunnel}    get tsr value    ${tsr}    max VPN tunnel interfaces allowed:\\s+(\\d+)
+    ${max_vlan}    get tsr value    ${tsr}    Max virtual interfaces:\\s+(\\d+)
+    ${max_dhcp}    get tsr value    ${tsr}    DHCPS Leases:\\s+(\\d+)
+    ${max_dpiSSH}    get tsr value    ${tsr}    max DPI-SSH Connections:\\s+(\\d+)
+    ${max_sp}    get tsr value    ${tsr}    maxSonicPointsPerInterface:\\s+(\\d+)
+    Telnet.write    \r
+    ###获取AO TSR###
+    Telnet.write    show tech-support-report address-objects
+    sleep    2
+    ${tsr_a}    Telnet.read
+    ${max_ao}    get tsr value    ${tsr_a}    Max objects:\\s+(\\d+)
+    ${max_ag}    get tsr value    ${tsr_a}    Max groups:\\s+(\\d+)
+    ${max_agd}    get tsr value    ${tsr_a}    Max group depth:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    sleep    2
+    ###获取SO TSR###
+    Telnet.write    show tech-support-report service-objects
+    sleep    2
+    ${tsr_s}    Telnet.read
+    ${max_so}    get tsr value    ${tsr_s}    Max objects:\\s+(\\d+)
+    ${max_sg}    get tsr value    ${tsr_s}    Max groups:\\s+(\\d+)
+    ${max_sgd}    get tsr value    ${tsr_s}    Max group depth:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    sleep    2
+    ###固定值###
+    ${max_arp}    set Variable    300
+    ${max_botnetFilters}    set Variable    512
+    ${max_geoIPFilters}    set Variable    512
+    ${max_dynamic-ao}    set Variable    256
+    ###S2S 和 Group VPN###
+    Telnet.Close Connection
+    ${max_s2s}    ${max_grpVpn}    get_site2site_and_groupVPN_target    ${type}
+    ###将TSR获取的值写入CSV表格###
+    write to csvFile    ${folder}    ${csv_name}    ${max_ao}    ${max_ag}    ${max_agd}    ${max_addressobjPerGrp}
+    ...    ${max_so}    ${max_sg}    ${max_sgd}    ${max_serviceobjPerGrp}    ${max_natPolicy}    ${max_vlan}
+    ...    ${max_zones}    ${max_localUser}    ${max_userGrp}    ${max_userLogin}    ${max_guestUser}    ${max_accessRules}
+    ...    ${max_dhcp}    ${max_sp}    ${max_s2s}    ${max_grpVpn}    ${max_routes}    ${max_vpn_tunnel}
+    ...    ${max_arp}    ${max_scheduleObj}    ${max_app_p}    ${max_app_o}    ${max_app_a}    ${max_app_e}
+    ...    ${max_phase1}    ${max_phase2}    ${max_sslVPN}    ${max_botnetFilters}    ${max_geoIPFilters}    ${max_routes}
+    ...    ${max_restAPI_Agents}    ${max_restAPI_userLogin}    ${max_dpiSSH}    ${max_dynamic-ao}
+    csv to xlsx    ${folder}    ${csv_name}
+    log to console    Get TSR successfully!
+
+simple_test
+    [Arguments]    ${ip}    ${port}=22
+    SSHLibrary.Open Connection    ${ip}    port= ${port}    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/capacityTB/scripts/
+    sleep    3
+    Comment    ssh_execute_command    ./simple_test.sh    240
+    Comment    sleep    2
+    ssh_execute_command    ./simple_test_1.sh    300
+    sleep    2
+    ssh_execute_command    ./simple_test_2.sh    20000
+
+get_tsr_value
+    [Arguments]    ${result}    ${item}
+    ${result1}    ${pvid}    Should Match Regexp    ${result}    ${item}
+    [Return]    ${pvid}
+
+compared_with_target
+    [Arguments]    ${type}    ${case_name}    ${actual_value}
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    @{data}=    read tsr csvfile    ${folder}    ${csv_name}.csv
+    ${target_value}    evaluate    int(${data[0]["${case_name}"]})
+    log    ${target_value}
+    run keyword if    ${target_value}==${actual_value}    log to console    ${case_name} passed! Actual value:${actual_value}=Target value:${target_value}!
+    ...    ELSE IF    ${target_value}<${actual_value}    log to console    ${case_name} need to confirm!!Actual value:${actual_value}>Target value:${target_value}!
+    ...    ELSE    log to console    ${case_name} failed!!Actual value:${actual_value} \ \ Target value:${target_value}
+
+get_target_fromCSV
+    [Arguments]    ${type}    ${case_name}
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    @{data}=    read tsr csvfile    ${folder}    ${csv_name}.csv
+    ${target_value}    evaluate    int(${data[0]["${case_name}"]})
+    [Return]    ${target_value}
+
+get_currentvalue_and_targetvalue
+    [Arguments]    ${ip}    ${port}    ${show_name}
+    CLI-login-firewall    ${ip}    ${port}
+    Telnet.write    show tech-support-report ${show_name}
+    sleep    20
+    ${tsr_o}    Telnet.read
+    ${current_value}    get tsr value    ${tsr_o}    Number of objects:\\s+(\\d+)
+    ${max_value}    get tsr value    ${tsr_o}    Max objects:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    [Return]    ${current_value}    ${max_value}
+
+get_userGrp_value
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="userObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Comment    Click element    xpath=//ul[@id="tabs"]//span[contains(text(),Local Groups)]
+    Click element    xpath=//ul/*[@id="groupFolder_trigger"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    wait until page contains    Local Groups
+    ${returnvalue}    get element attribute    xpath=//*/span[3]/span    title
+    log    ${returnvalue}
+    ${current_userGrp0}    evaluate    '${returnvalue}'.split(' ')[0]
+    ${current_userGrp}    trans_to_int    ${current_userGrp0}
+    log    current_userGrp:${current_userGrp}
+    Capture Page Screenshot
+    Unselect Frame
+    sleep    5
+    close browser
+    [Return]    ${current_userGrp}
+
+deleteAll_userGrp
+    [Arguments]    ${type}    ${default_value}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="userObjView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//ul/*[@id="groupFolder_trigger"]
+    Comment    sleep    2
+    Comment    Unselect Frame
+    Comment    Select Frame    id=tabFrame
+    wait until page contains    Local Groups
+    sleep    60
+    Click element    xpath=//div[@id="groupFolder_tabheader"]//div[@class="actionMenuTrigger"]
+    sleep    5
+    ${delAll_status}    get element attribute    xpath=//ul[@class="swlDropdownMenu"]/li[3]    class
+    run keyword if    "${delAll_status}" == "swlDropdownMenuItem swlDisabled"    log    "Delete all" is unavaliable!
+    ...    ELSE    Run Keywords    Click element    xpath=//ul[@class="swlDropdownMenu"]/li[@title="Delete all groups"]
+    ...    AND    confirm action
+    sleep    60
+    ${returnvalue}    get element attribute    xpath=//*/span[3]/span    title
+    log    ${returnvalue}
+    ${value_remain}    evaluate    '${returnvalue}'.split(' ')[0]
+    run keyword if    ${value_remain}==${default_value}    log to console    Deleted all successfully! value_remain:${value_remain}==default_value:${default_value}
+    ...    ELSE    log to console    Failed to delete all!
+    Capture Page Screenshot
+    Unselect Frame
+    sleep    5
+    close browser
+
+turn_to_classicMode
+    [Arguments]    ${type}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    login_by_https_TLS    ${host_ip}    admin    password    firefox
+    Unselect Frame
+    sleep    12
+    Select Frame    name=toggleFrame
+    sleep    2
+    click element    xpath=//div//*[@id="toggleViewBtn"]
+    sleep    10
+
+turn_to_userGrp
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="userObjView.html"]
+    sleep    2
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    Click element    xpath=//ul/*[@id="groupFolder_trigger"]
+    sleep    2
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    wait until page contains    Local Groups
+    Click element    xpath=//ul/*[@title="Delete all groups"]
+    sleep    60
+    close browser
+
+compared_with_target_ex
+    [Arguments]    ${type}    ${case_name}    ${actual_value}    ${default_value}
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    @{data}=    read tsr csvfile    ${folder}    ${csv_name}.csv
+    ${target_value}    evaluate    int(${data[0]["${case_name}"]})
+    ${max_value}    evaluate    ${target_value}+${default_value}
+    log    ${target_value}
+    run keyword if    ${max_value}==${actual_value}    log to console    Passed! Actual value:${actual_value}=max_value:${max_value}!
+    ...    ELSE IF    ${max_value}<${actual_value}    log to console    Need to confirm!!Actual value:${actual_value}>max value:${max_value}!
+    ...    ELSE    log to console    Failed!!Actual value:${actual_value} \ \ max:${max_value}
+
+get_ip_port
+    [Arguments]    ${type}
+    ###获取盒子IP##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    ${consoleserver_ip}    set variable    ${data[0]["CONSOLE_SERVER"]}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    [Return]    ${host_ip}    ${consoleserver_ip}    ${consoleserver_port}
+
+get_tsr_file
+    [Arguments]    ${type}
+    ${folder}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${path}    evaluate    '${location}'+'/'+'${folder}'
+    ${csv_name}    set Variable    ${type}_${version}_TSR
+    [Return]    ${path}    ${csv_name}
+
+get_arpResult
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    Click element    xpath=//*[@href="netArpView.html?startItem=0&sortCol=1&sortInverted=0"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    wait until page contains    Static ARP Entries
+    sleep    60
+    ${text}    Get Text    xpath=//table[@class="swlDataTablePlain"]
+    ###判断是否加到了300个###
+    log    ${text}
+    ${value}=    check_if_contain    ${text}    300
+    Run keyword if    ${value}== 1    log to console    Added to 300 successfully!
+    ...    ELSE    log to console    Failed! no 300 arps matched!
+    Capture Page Screenshot
+    sleep    20
+    Comment    Comment    Execute Javascript    document.getElementsByClassName('delAllStaticBtn').click()
+    Comment    click element    //td[@class="footerAlignRight"]/input[@name="delAllStaticBtn"]
+    Comment    Comment    click element    //*[@name="delAllStaticBtn"]
+    Comment    sleep    60
+    Comment    ${delAll_status}    get element attribute    xpath=//input[@value="Delete All"]    disabled
+    Comment    run keyword if    "${delAll_status}" == ""    log    Deleted all!
+    ...    ELSE    Failed to deleted all!
+    Unselect Frame
+    close browser
+
+CLI-noItems
+    [Arguments]    ${ip}    ${port}    ${item}
+    CLI-login-firewall    ${ip}    ${port}
+    Telnet.write    ${item}
+    sleep    30
+    Telnet.write    commit
+    sleep    60
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+    Telnet.write    ping 10.7.3.254
+    sleep    2
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    run keyword if    '${result}' == 'FAIL'    Log to console    Failed ping after no items! Can't ping gateway 10.7.3.254 successfully!
+    ...    ELSE    log to console    Ping gateway successfully after no items!
+
+ssh_execute_commands
+    [Arguments]    ${command}    ${time}
+    SSHLibrary.read
+    SSHLibrary.write    ${command}
+    sleep    ${time}
+    ${rtn}=    SSHLibrary.Read Until Regexp    ]#
+    ${More}=    check_if_contain    ${rtn}    Content:
+    run keyword if    ${More}== 1    log to console    Running successfully!
+    ...    ELSE    log to console    Running failed!
+
+get_delete_application_values
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="policyView.html"]
+    sleep    2
+    ###查看app-p的结果并删除###
+    Click element    xpath=//*[@href="appFirewallView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${app_p_total}    get element attribute    xpath=//*/span[3]/span    title
+    ${actual_app-p}    evaluate    '${app_p_total}'.split(' ')[0]
+    log to console    actual app policies=${actual_app-p}
+    Capture Page Screenshot
+    Comment    wait until page contains    Filter
+    Comment    sleep    60
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all app firewall policies"]
+    confirm action
+    sleep    60
+    ${remain01}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain1}    evaluate    '${remain01}'.split(' ')[0]
+    run keyword if    "${remain1}" == "0"    log to console    "Delete all" app policies successfully!
+    ...    ELSE    Fail    Failed to "Delete all" app policies!
+    Unselect Frame
+    ###查看app-o的结果并删除###
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="matchObjView.html"]
+    sleep    20
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${app_o_total}    get element attribute    xpath=//*/span[3]/span    title
+    ${actual_app-o}    evaluate    '${app_o_total}'.split(' ')[0]
+    log to console    actual app objects=${actual_app-o}
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all match objects"]
+    confirm action
+    sleep    60
+    ${remain02}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain2}    evaluate    '${remain02}'.split(' ')[0]
+    run keyword if    "${remain2}" == "0"    log to console    "Delete all" app objects successfully!
+    ...    ELSE    Fail    Failed to "Delete all" app objects!
+    Unselect Frame
+    ###查看app-a的结果并删除###
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="actionObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${app_a_total}    get element attribute    xpath=//*/span[3]/span    title
+    ${actual_app-a}    evaluate    '${app_a_total}'.split(' ')[0]
+    log to console    actual app action=${actual_app-a}
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all custom action objects"]
+    confirm action
+    sleep    60
+    ${remain03}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain3}    evaluate    '${remain03}'.split(' ')[0]
+    log to console    Delete all! remain=${remain3}
+    ${max_app-a}    get_target_fromCSV    ${type}    Application Firewall Actions
+    run keyword if    ${remain3} < ${max_app-a}    log to console    "Delete all" app action successfully!
+    ...    ELSE    log to console    Failed to "Delete all" app action!
+    Capture Page Screenshot
+    ###查看app-e的结果并删除###
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="emailObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${app_e_total}    get element attribute    xpath=//*/span[3]/span    title
+    ${actual_app-e}    evaluate    '${app_e_total}'.split(' ')[0]
+    log to console    actual app email objects=${actual_app-e}
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all E-mail Address Objects"]
+    confirm action
+    sleep    60
+    ${remain04}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain4}    evaluate    '${remain04}'.split(' ')[0]
+    run keyword if    "${remain4}" == "0"    log to console    "Delete all" email address objects successfully!
+    ...    ELSE    Fail    Failed to "Delete all" email address objects!
+    close browser
+    [Return]    ${actual_app-p}    ${actual_app-o}    ${actual_app-a}    ${actual_app-e}
+
+get_delete_routes
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    ###查看IPv4 route的结果并删除###
+    Click element    xpath=//*[@href="newRoutePolicies.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //*[@id="pbrFolder_trigger"]
+    sleep    10
+    ${route_ipv4_total}    get element attribute    xpath=//*/span[5]/span    title
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all custom route policies"]
+    sleep    3
+    confirm action
+    sleep    120
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[5]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! IPv4 route remain=${remain}
+    ${max_static-route}    get_target_fromCSV    ${type}    Static Routes
+    ${rtn}    evaluate    ${max_static-route}-6
+    run keyword if    ${remain} < ${rtn}    log to console    "Delete all" routes successfully!
+    ...    ELSE    log to console    Failed to "Delete all" routes!
+    ###查看IPv6的值###
+    Click element    xpath=//div[@class="toolbarAction swlIpVersionAction actionWithDropdown"]
+    sleep    2
+    Click element    xpath=//li[@data-value="ipv6"]
+    sleep    10
+    ${route_ipv6_total}    get element attribute    xpath=//*/span[5]/span    title
+    ${actual_route_ipv4}    evaluate    '${route_ipv4_total}'.split(' ')[0]
+    ${actual_route_ipv4_int}    trans_to_int    ${actual_route_ipv4}
+    Comment    ${actual_route_ipv4_int}    evaluate    '${actual_route_ipv4}'.replace(',','')
+    ${actual_route_ipv6}    evaluate    '${route_ipv6_total}'.split(' ')[0]
+    ${actual_static-route}    evaluate    ${actual_route_ipv4_int}+${actual_route_ipv6}
+    log to console    actual static-route=${actual_static-route} \ \ IPv4 route=${actual_route_ipv4_int};IPv6 route=${actual_route_ipv6}
+    Capture Page Screenshot
+    Comment    wait until page contains    Filter
+    Comment    sleep    60
+    close browser
+    [Return]    ${actual_static-route}
+
+trans_to_int
+    [Arguments]    ${text}
+    ${value}=    check_if_contain    ${text}    ,
+    ${actual_result1}    set variable    1
+    ${actual_result}    run keyword if    ${value}==1    evaluate_for_if    ${actual_result1}    '${text}'.replace(',','')
+    ...    ELSE    evaluate_for_if    ${actual_result1}    ${text}
+    [Return]    ${actual_result}
+
+get_delete_nat-policies
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="natPoliciesView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${nat-pol_total}    get element attribute    xpath=//*/span[5]/span    title
+    ${actual_nat-pol}    evaluate    '${nat-pol_total}'.split(' ')[0]
+    ${actual_nat-pol_int}    trans_to_int    ${actual_nat-pol}
+    log to console    actual nat-pol=${actual_nat-pol_int}
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all custom poliicies"]
+    confirm action
+    ${time}    set variable    400
+    close browser
+    ${returnValue}    read_console_log    ${type}    ${time}    ${case_name}
+    ${log_content}    set variable    After "DELETE ALL" ${case_name}, console crashed!
+    ${col}    set variable    15
+    run keyword if    ${returnValue}==1    run keywords    log to console    After "DELETE ALL", console crashed!
+    ...    AND    log_to_xlsx    ${type}    ${col}    ${log_content}
+    ...    ELSE    log to console    After delete all, sleep 300s, no crash!
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="natPoliciesView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[5]/span    title
+    ${remain1}    evaluate    '${remain0}'.split(' ')[0]
+    ${remain}    trans_to_int    ${remain1}
+    log to console    Delete all! After 400s+, nat-pol remain=${remain}
+    ${max_nat-pol}    get_target_fromCSV    ${type}    NAT Policies
+    ${rtn}    set variable    ${max_nat-pol}
+    ${log_content1}    set variable    After 400s+, failed to "Delete all" nat-pol! DTS-201909
+    run keyword if    ${remain} < ${rtn}    log to console    "Delete all" nat-pol successfully!
+    ...    ELSE    run keywords    log to console    ${log_content1}
+    ...    AND    log_to_xlsx    ${type}    ${col}    ${log_content1}
+    ...    AND    recover_orig_conf    ${type}
+    close browser
+    [Return]    ${actual_nat-pol_int}
+
+evaluate_for_if
+    [Arguments]    ${text1}    ${text2}
+    ${text1}    evaluate    ${text2}
+    [Return]    ${text1}
+
+get_delete_botnet-filter
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="ssSettingsView.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="botnetFilter.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //*[@id="usrBotnetFolder_trigger"]
+    sleep    10
+    ${botnet-filter_total}    get element attribute    xpath=//*/span[3]/span    title
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all custom address objects"]
+    confirm action
+    sleep    60
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! botnet filter remain=${remain}
+    Comment    ${max_botnet-filter}    get_target_fromCSV    ${type}    Botnet Filters
+    Comment    ${rtn}    set variable    ${max_botnet-filter}
+    run keyword if    ${remain} ==0    log to console    "Delete all" botnet filter ssuccessfully!
+    ...    ELSE    log to console    Failed to "Delete all" \ botnet filters!
+    ${actual_botnet-filter}    evaluate    '${botnet-filter_total}'.split(' ')[0]
+    Comment    ${actual_botnet-filter_int}    trans_to_int    ${actual_botnet-filter}
+    log to console    actual botnet-filter=${actual_botnet-filter}
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_botnet-filter}
+
+get_delete_geo-ip-filter
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="ssSettingsView.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="geoIpFilter.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //*[@id="geoIpUsrLocFolder_trigger"]
+    sleep    10
+    ${geo-filter_total}    get element attribute    xpath=//*/span[3]/span    title
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all custom address objects"]
+    confirm action
+    ${time}    set variable    60
+    read_console_log    ${type}    ${time}    ${case_name}
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! geo ip filter remain=${remain}
+    Comment    ${max_geo-ip-filter}    get_target_fromCSV    ${type}    GeoIP Filters
+    Comment    ${rtn}    set variable    ${max_geo-ip-filter}
+    run keyword if    ${remain} ==0    log to console    "Delete all" geo-ip-filter successfully!
+    ...    ELSE    log to console    Failed to "Delete all" geo-ip-filter!
+    ${actual_geo-ip-filter}    evaluate    '${geo-filter_total}'.split(' ')[0]
+    Comment    ${actual_geo-ip-filter_int}    trans_to_int    ${actual_geo-ip-filter}
+    log to console    actual geo-ip-filter=${actual_geo-ip-filter}
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_geo-ip-filter}
+
+get_delete_guest-user
+    [Arguments]    ${type}    ${max_guest-user}    ${run_time}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="guestUserObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //*[@name="addGenBulkGuestBtn"]
+    sleep    3
+    ${titles}    Get Window Titles
+    ${titles1}    Get From List    ${titles}    0
+    ${titles2}    Get From List    ${titles}    1
+    select Window    title=${titles2}
+    input text    name=uoNumAccounts    ${max_guest-user}
+    sleep    1
+    click element    //input[@value="OK"]
+    sleep    ${run_time}
+    select Window    title=${titles1}
+    sleep    2
+    ${text}    get text    xpath=//td[@id="pageButtons"]/table/tbody/tr
+    ${text1}    evaluate    '${text}'.split('of ')[-1]
+    ${actual_guestUser}    evaluate    '${text1}'.replace(')',' ')
+    log    Actual guest user=${actual_guestUser}
+    Run keyword if    ${actual_guestUser}== ${max_guest-user}    log to console    Added to ${max_guest-user} successfully!Actual guest user=${actual_guestUser}
+    ...    ELSE    log to console    Failed to add ${max_guest-user} guest user!Actual guest user=${actual_guestUser}
+    Capture Page Screenshot
+    execute javascript    window.delAllVisibleGuests()
+    sleep    2
+    confirm action
+    sleep    2
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Handle Alert    action=ACCEPT
+    sleep    60
+    ${text0}    get text    xpath=//td[@id="pageButtons"]/table/tbody/tr
+    ${text01}    evaluate    '${text0}'.split('of ')[-1]
+    ${remain_guestUser}    evaluate    '${text01}'.replace(')',' ')
+    log to console    remain guest user=${remain_guestUser}
+    Run keyword if    ${remain_guestUser}==0    log to console    Deleted ${actual_guestUser}successfully!remain guest user=${remain_guestUser}
+    ...    ELSE    log to console    Failed to delete ${actual_guestUser}!remain guest user=${remain_guestUser}
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_guestUser}
+
+get_delete_local-user
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="userObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //ul/*[@id="userFolder_trigger"]
+    sleep    10
+    ${local-user_total}    get element attribute    xpath=//*/span[3]/span    title
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    20
+    Click element    xpath=//li[@title="Delete all users"]
+    confirm action
+    sleep    60
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! local user remain=${remain}
+    run keyword if    ${remain} ==0    log to console    "Delete all" local user ssuccessfully!
+    ...    ELSE    log to console    Failed to "Delete all" \ local user!
+    ${actual_local-user}    evaluate    '${local-user_total}'.split(' ')[0]
+    ${actual_local-user_int}    trans_to_int    ${actual_local-user}
+    log to console    actual local user=${actual_local-user_int}
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_local-user_int}
+
+get_site2site_and_groupVPN_target
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="vpnSettingsView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    5
+    ${text_s2sVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[1]/span
+    ${text_groupVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[2]/span
+    ${max_s2sVPN}    get_tsr_value    ${text_s2sVPN}    Site To Site Policies: \\d+ Policies Defined, \\d+ Policies Enabled, (\\d+) Maximum Policies Allowed
+    ${max_groupVPN}    get_tsr_value    ${text_groupVPN}    GroupVPN Policies: \\d+ Policies Defined, \\d+ Policies Enabled, (\\d+) Maximum Policies Allowed
+    Capture Page Screenshot
+    Comment    close browser
+    [Teardown]    close browser
+    [Return]    ${max_s2sVPN}    ${max_groupVPN}
+
+get_delete_S2Svpn
+    [Arguments]    ${type}    ${case_name}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    Comment    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    login_by_https_TLS    ${host_ip}    admin    password    firefox
+    Unselect Frame
+    sleep    25
+    Select Frame    name=toggleFrame
+    sleep    5
+    click element    xpath=//div//*[@id="toggleViewBtn"]
+    sleep    60
+    Comment    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="vpnSettingsView.html"]
+    sleep    100
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    10
+    ${text_s2sVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[1]/span
+    ${actual_s2sVPN}    get_tsr_value    ${text_s2sVPN}    Site To Site Policies: (\\d+) Policies Defined, \\d+ Policies Enabled, \\d+ Maximum Policies Allowed
+    log to console    actual site-to-site VPN=${actual_s2sVPN}
+    execute javascript    window.deleteAllSAs()
+    confirm action
+    ${time}    set variable    100
+    read_console_log    ${type}    ${time}    ${case_name}
+    ${text1_s2sVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[1]/span
+    ${remain}    get_tsr_value    ${text1_s2sVPN}    Site To Site Policies: (\\d+) Policies Defined, \\d+ Policies Enabled, \\d+ Maximum Policies Allowed
+    run keyword if    ${remain} ==0    log to console    remain=${remain} \ "Delete all" site-to-site vpn successfully!
+    ...    ELSE    log to console    Failed to "Delete all" site-to-site vpn !
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_s2sVPN}
+
+get_groupVPN_value
+    [Arguments]    ${type}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    Comment    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    login_by_https_TLS    ${host_ip}    admin    password    firefox
+    Unselect Frame
+    sleep    5
+    Select Frame    name=toggleFrame
+    sleep    10
+    click element    xpath=//div//*[@id="toggleViewBtn"]
+    sleep    30
+    Comment    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="vpnSettingsView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    5
+    ${text_groupVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[2]/span
+    ${actual_groupVPN}    get_tsr_value    ${text_groupVPN}    GroupVPN Policies: (\\d+) Policies Defined, \\d+ Policies Enabled, \\d+ Maximum Policies Allowed
+    Capture Page Screenshot
+    close browser
+    [Teardown]
+    [Return]    ${actual_groupVPN}
+
+factory_default_configure
+    [Arguments]    ${type}
+    [Documentation]    恢复出厂配置
+    log to console    Factory default!
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    Telnet.Write    restore-defaults
+    sleep    1
+    Telnet.Set Prompt    [cancel]:
+    sleep    1
+    Telnet.Read Until Prompt
+    Telnet.Write    yes
+    sleep    400
+
+get_delete_rest-api-agent
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    ###查看nat policy的结果并删除###
+    Click element    xpath=//*[@href="usersSettingsView.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    click element    xpath=//li[@id="divAuthentication_trigger"]
+    sleep    2
+    click element    xpath=//input[@value="Configure SSO"]
+    sleep    3
+    Comment    Unselect Frame
+    ${titles}    Get Window Titles
+    ${titles1}    Get From List    ${titles}    0
+    ${titles2}    Get From List    ${titles}    1
+    select Window    title=${titles2}
+    click element    xpath=//a[@title="3rd Party API"]
+    sleep    1
+    click element    xpath=//a[@title="3rd-Party API Clients"]
+    sleep    1
+    Capture Page Screenshot
+    ${actual_rest-api-agent}    get matching xpath count    xpath=//tbody/tr[@class="listItem"]
+    log to console    actual_rest-api-agent=${actual_rest-api-agent}
+    ###删除所有的连接###
+    : FOR    ${i}    IN RANGE    ${actual_rest-api-agent}
+    \    click element    //tbody/tr[2]//img[@title="Delete this API Client"]
+    \    sleep    1
+    Capture Page Screenshot
+    click element    //*[value="OK"]
+    sleep    2
+    close browser
+    [Return]    ${actual_rest-api-agent}
+
+get_delete_access-rules
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="policyView.html"]
+    sleep    60
+    ###查看access rules的结果并删除###
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${access-rule_total1}    get element attribute    xpath=//*/span[5]/span    title
+    ${access-rule_total}    evaluate    '${access-rule_total1}'.split(' ')[0]
+    ${GUI_access-rule}    trans_to_int    ${access-rule_total}
+    Capture Page Screenshot
+    Click element    xpath=//*[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    2
+    Click element    xpath=//li[@title="Delete all custom rules"]
+    confirm action
+    ${time}    set variable    100
+    ${returnValue}    read_console_log    ${type}    ${time}    ${case_name}
+    ${log_content}    set variable    After "DELETE ALL" ${case_name}, console crashed!DTS-200749
+    ${col}    set variable    15
+    ${remain_accessRules}    run keyword if    ${returnValue}==1    run keywords    log to console    After "DELETE ALL", console crashed!
+    ...    AND    log_to_xlsx    ${type}    ${col}    ${log_content}
+    ...    ELSE    get access_rules_tsr    ${type}
+    close browser
+    [Return]    ${GUI_access-rule}
+
+get_vlan_value
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    10
+    ${actual_vlan}    get matching xpath count    xpath=//tr[@class="listItem childRow childRowLabel listItemZebra-0"]
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_vlan}
+
+read_console_log
+    [Arguments]    ${type}    ${run_time}    ${case_name}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    sleep    2
+    Telnet.Open Connection    ${console_ip}    port=${console_port}
+    sleep    2
+    Telnet.Login    root    123456
+    Telnet.write    \r
+    sleep    ${run_time}
+    ${rtn}    Telnet.read
+    sleep    60
+    log    ${rtn}
+    ${value}=    check_if_contain    ${rtn}    Stack trace of
+    Run keyword if    ${value}== 1    run keywords    log to console    After ${case_name}, CONSOLE CRASHED! CONSOLE CRASHED!!CONSOLE CRASHED!!CONSOLE CRASHED!!
+    ...    AND    sleep    400
+    ...    ELSE    log to console    Console is normal!
+    Telnet.close Connection
+    [Return]    ${value}
+
+deleteAll_vlan
+    [Arguments]    ${ip}    ${port}    ${actual_vlan}
+    CLI-login-firewall    ${ip}    ${port}
+    ${max_range}    evaluate    ${actual_vlan}+1
+    : FOR    ${i}    IN RANGE    1    ${max_range}
+    \    Telnet.write    no interface x0 vlan ${i}
+    \    sleep    1
+    Telnet.write    commit
+    ${time}    evaluate    ${max_range}*7
+    sleep    ${time}
+    ${rtn}    Telnet.read
+    ${value}=    check_if_contain    ${rtn}    Changes made
+    Run keyword if    ${value}== 1    log to console    Delete ${actual_vlan} vlan successfully!
+    ...    ELSE    log to console    Failed to delete ${actual_vlan} vlan!
+    Telnet.close Connection
+
+get_delete_zone
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    sleep    20
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    20
+    Click element    xpath=//*[@href="zoneObjView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${zone_total}    get element attribute    xpath=//*/span[3]/span    title
+    Capture Page Screenshot
+    ${actual_zone}    evaluate    '${zone_total}'.split(' ')[0]
+    ${actual_zone_int}    trans_to_int    ${actual_zone}
+    log to console    actual zone=${actual_zone_int}
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    10
+    Click element    xpath=//li[@title="Delete all custom zone objects"]
+    confirm action
+    Capture Page Screenshot
+    ${time}    set variable    100
+    ${returnValue}    read_console_log    ${type}    ${time}    ${case_name}
+    run keyword if    ${returnValue}==1    log to console    After "DELETE ALL" ${case_name}, console crashed!
+    ...    ELSE    log to console    After "DELETE ALL" ${case_name}, console is normal!
+    ${log_content}    set variable    After "DELETE ALL" ${case_name}, console crashed!
+    ${col}    set variable    10
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! zone remain=${remain}
+    run keyword if    ${remain} < ${actual_zone}    log to console    "Delete all" zone ssuccessfully!
+    ...    ELSE    log to console    Failed to "Delete all" \ zone!
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_zone}
+
+CLI-config-Test-WLAN-X2
+    [Arguments]    ${port}    ${ip}    ${mask}    ${max_sp}
+    tel    interface ${port}
+    tel    ip-assignment WLAN static
+    tel    ip ${ip} netmask ${mask}
+    tel    commit
+    ${rtn}    Telnet.read
+    ${b}=    check_if_contain    ${rtn}    --more--|--MORE--
+    Run keyword if    ${b} == 1    Telnet.Write Bare    q
+    sleep    1
+    tel    exit
+    tel    management ping
+    tel    management https
+    tel    user-login https
+    tel    sonicpoint limit ${max_sp}
+    tel    commit
+    ${rtn0}    Telnet.read
+    ${a}=    check_if_contain    ${rtn0}    --more--|--MORE--
+    Run keyword if    ${a} == 1    Telnet.Write Bare    q
+    sleep    1
+    tel    exit
+
+export_log
+    [Arguments]    ${type}    ${case_name}
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ### 创建log文件夹###
+    ${path0}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder0}    evaluate    '${location}'+'/'+'${path0}'
+    ${path1}    evaluate    '${type}'+'-'+'${version}'+'-'+'${case_name}'+'-Log'
+    ${folder}    evaluate    '${folder0}'+'/'+'${path1}'
+    Create Folder    ${folder}
+    ${path}    evaluate    '${path0}'+'/'+'${path1}'
+    ###ping 网关确认盒子是否起来###
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    Telnet.write    ping ${data[0]["GATEWAY"]}
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    alive
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    alive
+    run keyword if    '${result}' == 'FAIL'    FAIL    ping gateway failed,timeout!!
+    ###导出当前配置和TSR###
+    ${filename_exp}    evaluate    '${type}'+'-'+'${case_name}'+'.exp'
+    ${filename_tsr}    evaluate    '${type}'+'-'+'${case_name}'+'.wri'
+    Export_conf    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename_exp}    ${type}
+    export_tsr    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename_tsr}    ${type}
+    log to console    Export EXP and TSR files successfully!
+    Capture Page Screenshot
+    close browser
+
+export_tsr
+    [Arguments]    ${username}    ${password}    ${ip}    ${path}    ${file}    ${type}
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    ###导出配置##
+    Telnet.write    export tech-support-report ftp ftp://${username}:${password}@${ip}/${path}/${file}
+    sleep    20
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    Upload complete
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    Upload complete
+    run keyword if    '${result}' == 'FAIL'    FAIL    Export tsr fail ,timeout!!
+
+get_delete_phase2
+    [Arguments]    ${type}    ${case_name}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    Comment    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    login_by_https_TLS    ${host_ip}    admin    password    firefox
+    Unselect Frame
+    sleep    5
+    Select Frame    name=toggleFrame
+    sleep    10
+    click element    xpath=//div//*[@id="toggleViewBtn"]
+    sleep    30
+    Comment    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="vpnSettingsView.html"]
+    sleep    120
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    150
+    ${text_phase2}    Get Text    xpath=//div[@id="divVpnTunnels_tblSummary"]/div[1]/span
+    ${actual_phase2}    get_tsr_value    ${text_phase2}    (\\d+) Currently Active VPN Tunnels
+    log to console    actual phase2=${actual_phase2}
+    execute javascript    window.deleteAllSAs()
+    confirm action
+    ${time}    set variable    60
+    read_console_log    ${type}    ${time}    ${case_name}
+    ${text1_s2sVPN}    Get Text    xpath=//div[@id="divVpnPolicies_tblSummary"]/div[1]/span
+    ${remain}    get_tsr_value    ${text1_s2sVPN}    Site To Site Policies: (\\d+) Policies Defined, \\d+ Policies Enabled, \\d+ Maximum Policies Allowed
+    run keyword if    ${remain} ==0    log to console    remain=${remain} \ "Delete all" site-to-site vpn(phase2) successfully!
+    ...    ELSE    log to console    Failed to "Delete all" site-to-site vpn(phase2) \ !
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_phase2}
+
+get_tunnelInterface_value
+    [Arguments]    ${type}    ${num}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    10
+    Comment    ${actual_tunnelInterface}    get matching xpath count    xpath=//tr[contains(@id="16106")]
+    ${text}    Get Text    xpath=/html/body/div[1]/form[1]/div[2]/div/div[2]/table/tbody
+    log to console    ${text}
+    ###判断是否加到了300个###
+    log    ${text}
+    ${value}=    check_if_contain    ${text}    10.${num}.1.1
+    Run keyword if    ${value}== 1    log to console    Added to ${num} tunnel interfaces successfully!
+    ...    ELSE    log to console    Failed to add ${num} tunnel interfaces !
+    ${actual_tunnelInterface0}    set variable    0
+    ${actual_tunnelInterface}    Run keyword if    ${value}== 1    setVariable_for_if    ${actual_tunnelInterface0}    ${num}
+    ...    ELSE    setVariable_for_if    ${actual_tunnelInterface0}    0
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_tunnelInterface}
+
+deleteAll_tunnelInterface
+    [Arguments]    ${ip}    ${port}    ${actual_tunnelInterface}
+    CLI-login-firewall    ${ip}    ${port}
+    ${num}    evaluate    ${actual_tunnelInterface}+1
+    : FOR    ${i}    IN RANGE    1    ${num}
+    \    Telnet.write    no tunnel-interface vpn V_T_I_${i}
+    \    sleep    1
+    Telnet.write    commit
+    sleep    120
+    ${rtn}    Telnet.read
+    ${value}=    check_if_contain    ${rtn}    Changes made
+    Run keyword if    ${value}== 1    log to console    Delete ${actual_tunnelInterface} tunnel interface successfully!
+    ...    ELSE    log to console    Failed to delete ${actual_tunnelInterface} tunnel interface!
+    Telnet.close Connection
+
+get_delete_addressGroup
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    5
+    Click element    xpath=//*[@href="addrObjView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//li[@id="grpFolder_trigger"]
+    Comment    Capture Page Screenshot
+    sleep    60
+    ${addressGrp_total1}    get element attribute    xpath=//table[@id="grpFolderTableFooterId"]//span[4]/span    title
+    ${addressGrp_total}    evaluate    '${addressGrp_total1}'.split(' ')[0]
+    ${actual_addressGrp}    trans_to_int    ${addressGrp_total}
+    log to console    actual address group=${actual_addressGrp}
+    Click element    xpath=//*[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    3
+    Click element    xpath=//li[@title="Delete all custom address object groups"]
+    confirm action
+    ${time}    set variable    250
+    read_console_log    ${type}    ${time}    ${case_name}
+    close browser
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    5
+    Click element    xpath=//*[@href="addrObjView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//li[@id="grpFolder_trigger"]
+    sleep    120
+    ${remain0}    get element attribute    xpath=//table[@id="grpFolderTableFooterId"]//span[4]/span    title
+    ${remain1}    evaluate    '${remain0}'.split(' ')[0]
+    ${remain}    trans_to_int    ${remain1}
+    log to console    Delete all! address group remain=${remain}
+    ${rtn}    set variable    500
+    run keyword if    ${remain} < ${rtn}    log to console    "Delete all" address group successfully!
+    ...    ELSE    run keywords    log to console    Failed to "Delete all" address group!
+    ...    AND    export log    ${type}    ${case_name}
+    log to console    actual address group=${actual_addressGrp}
+    Comment    Capture Page Screenshot
+    Comment    close browser
+    [Teardown]    Close All Browsers
+    [Return]    ${actual_addressGrp}
+
+runScript
+    [Arguments]    ${command}    ${time}    ${num}    ${test_case}
+    SSHLibrary.read
+    SSHLibrary.write    ${command}
+    sleep    ${time}
+    ${rtn}=    SSHLibrary.Read Until Regexp    ]#
+    ${More}=    check_if_contain    ${rtn}    unsuccessful
+    run keyword if    ${More}== 1    Fail    Can't add ${num} \ ${test_case} !
+    ...    ELSE    log to console    Add ${num} \ ${test_case} successfully!
+    SSHLibrary.close connection
+
+get_delete_user-login
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    sleep    5
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Capture Page Screenshot
+    sleep    5
+    Comment    ${actual_user-login}    get matching xpath count    xpath=//table[@id="usersTable"]/tbody/tr
+    ${text}    get text    xpath=//td[@id="pageButtons"]/table/tbody/tr
+    ${text1}    evaluate    '${text}'.split('of ')[-1]
+    ${actual_user-login1}    evaluate    '${text1}'.replace(')',' ')
+    ${actual_user-login}    evaluate    ${actual_user-login1}-1
+    log to console    actual_user-login:${actual_user-login}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    sleep    5
+    Click element    xpath=//*[@href="userObjView.html"]
+    sleep    14
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //ul/*[@id="userFolder_trigger"]
+    sleep    15
+    Capture Page Screenshot
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    5
+    Click element    xpath=//li[@title="Delete all users"]
+    sleep    2
+    confirm action
+    sleep    100
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! local user remain=${remain}
+    run keyword if    ${remain} ==0    log to console    "Delete all" local user ssuccessfully!
+    ...    ELSE    log to console
+    log to console    delete all local user=delete all user-login connection
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_user-login}
+
+user-login_loopRun
+    [Arguments]    ${num_loop}    ${run_time}    ${X0_IP}    ${num}    ${type}    ${case_name}
+    : FOR    ${i}    IN RANGE    ${num_loop}
+    \    ssh_login_capBed    ${tb_ip}
+    \    SSHLibrary.Write    cd /root/capacityTB/bin
+    \    sleep    2
+    \    SSHLibrary.Write    \\cp -r capacityConf_9_user-login_noUser.xml capacityConf_9.xml
+    \    sleep    1
+    \    SSHLibrary.Write    cd /root/capacityTB/scripts
+    \    sleep    2
+    \    SSHLibrary.Write    \\cp -r ula_0_${i}.pl ula.pl
+    \    sleep    1
+    \    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X0_IP} -o user-login -n ${num}    ${run_time}    ${type}    ${case_name}
+
+user-login_lastRun
+    [Arguments]    ${run_time}    ${type}    ${case_name}    ${X0_IP}    ${num}
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    cd /root/capacityTB/bin
+    sleep    2
+    SSHLibrary.Write    \\cp -r capacityConf_9_user-login_noUser.xml capacityConf_9.xml
+    sleep    1
+    SSHLibrary.Write    cd /root/capacityTB/scripts
+    sleep    2
+    SSHLibrary.Write    \\cp -r ula_1.pl ula.pl
+    sleep    1
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X0_IP} -o user-login -n ${num}    ${run_time}    ${type}    ${case_name}
+
+get_delete_dynamic-ao
+    [Arguments]    ${type}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    Comment    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    login_by_https_TLS    ${host_ip}    admin    password    firefox
+    sleep    4
+    Unselect Frame
+    Select Frame    name=logoFrame
+    sleep    2
+    click element    xpath=//div//*[@id="nav_manage"]
+    sleep    8
+    Unselect Frame
+    Select Frame    name=outlookFrame
+    sleep    2
+    click element    xpath=//*[@href="matchObjView.html"]
+    sleep    5
+    click element    xpath=//*[@href="dynObjView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${dynamic-ag_total1}    get element attribute    xpath=//*/span[3]/span    title
+    Capture Page Screenshot
+    ${dynamic-ag_total}    evaluate    '${dynamic-ag_total1}'.split(' ')[0]
+    ${actual_dynamic-ag}    trans_to_int    ${dynamic-ag_total}
+    log to console    actual_dynamic-ag=${actual_dynamic-ag}
+    Comment    execute javascript    window.checkAllDelete(this)
+    click element    xpath=//input[@name="checkAllObjs"]
+    sleep    4
+    click element    xpath=//div[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    3
+    click element    xpath=//li[@title="Delete marked dynamic external objects"]
+    confirm action
+    sleep    60
+    Capture Page Screenshot
+    ${remain0}    get element attribute    xpath=//*/span[3]/span    title
+    ${remain}    evaluate    '${remain0}'.split(' ')[0]
+    log to console    Delete all! local user remain=${remain}
+    run keyword if    ${remain} ==0    log to console    "Delete all" dynamic-ao ssuccessfully!
+    ...    ELSE    log to console    Failed to "Delete all" dynamic ao!
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_dynamic-ag}
+
+del_addressGrp_smallBox
+    [Arguments]    ${type}
+    ###获取target值##
+    ${test_case}    evaluate    'Address Groups'
+    ${case_name}    set variable    addressGrp
+    ${max_addressGrp}    get_target_fromCSV    ${type}    ${test_case}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###删除所有连接##
+    ${actual_addressGrp}    get_delete_addressGroup    ${type}    ${case_name}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###写入测试结果##
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    1    ${actual_addressGrp}
+    ${address-g_result}    set variable    ${max_addressGrp}/${actual_addressGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    1    ${address-g_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_addressGrp}
+    [Teardown]    close all browsers
+
+del_addressObj_smallBox
+    [Arguments]    ${type}    ${init_value}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###删除所有连接###
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    ${init_value1}    ${max_value1}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!
+    ...    ELSE    log to console    Failed to deleted all objects!
+    Telnet.close connection
+
+del_accessRules_smallBox
+    [Arguments]    ${type}    ${actual_access-rule}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Rules Per Table'
+    ${case_name}    set variable    access_rule
+    ###删除所有添加###
+    ${GUI_access-rule}    get_delete_access-rules    ${type}    ${case_name}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_access-rule}
+    ###恢复原始配置###
+    recover_orig_conf    ${type}
+
+del_accessRules_bigBox
+    [Arguments]    ${type}    ${actual_access-rule}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Rules Per Table'
+    ${case_name}    set variable    access_rule
+    ###删除所有连接###
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    sleep    60
+    Click element    xpath=//*[@href="policyView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Capture Page Screenshot
+    sleep    20
+    Click element    xpath=//*[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    5
+    Click element    xpath=//li[@title="Delete all custom rules"]
+    sleep    2
+    confirm action
+    ${time}    set variable    120
+    close browser
+    ${returnValue}    read_console_log    ${type}    ${time}    ${case_name}
+    ${log_content}    set variable    After "DELETE ALL" ${case_name}, console crashed!DTS-200749
+    ${col}    set variable    15
+    ${remain_accessRules}    run keyword if    ${returnValue}==1    run keywords    log to console    After "DELETE ALL", console crashed!
+    ...    AND    log_to_xlsx    ${type}    ${col}    ${log_content}
+    ...    ELSE    get access_rules_tsr    ${type}    ${actual_access-rule}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_access-rule}
+    ###恢复原始配置###
+    recover_orig_conf    ${type}
+
+config firewall
+    [Arguments]    ${type}
+    log to console    Start to config firewall!
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###串口下完成测试相关配置####
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    CLI-config-Test-LAN-X0    ${data[0]["LAN PORT"]}    ${data[0]["LAN IP"]}    ${data[0]["LAN MASK"]}
+    sleep    1
+    ###ping gateway check####
+    CLI-config_wan_ip    X1    ${data[0]["HOST_IP"]}    ${data[0]["NETMASK"]}    ${data[0]["GATEWAY"]}
+    Telnet.Close connection
+    sleep    60
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    Telnet.Write    ping ${data[0]["GATEWAY"]}
+    sleep    5
+    Telnet.Read Until    is alive
+    ###通过https完成firewall注册###
+    sleep    5
+    login_by_https    ${data[0]["HOST_IP"]}    admin    password    firefox
+    sleep    10
+    Regist_FW_by_https    shsystem@163.com    sonicwall
+    sleep    1
+    close browser
+    ###通过https完成enable TLS###
+    Enable_TLS    ${data[0]["HOST_IP"]}    admin    password    firefox
+    sleep    5
+    close browser
+    LOG TO CONSOLE    Finish enable TLS!
+    Telnet.Close Connection
+    sleep    300
+
+del_addressGrp_bigBox
+    [Arguments]    ${type}
+    ###获取target值##
+    ${test_case}    evaluate    'Address Groups'
+    ${case_name}    set variable    addressGrp
+    ${max_addressGrp}    get_target_fromCSV    ${type}    ${test_case}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###删除所有连接###
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    8
+    Click element    xpath=//*[@href="addrObjView.html"]
+    sleep    100
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//li[@id="grpFolder_trigger"]
+    Comment    Capture Page Screenshot
+    sleep    100
+    ${addressGrp_total1}    get element attribute    xpath=//table[@id="grpFolderTableFooterId"]//span[4]/span    title
+    ${addressGrp_total}    evaluate    '${addressGrp_total1}'.split(' ')[0]
+    ${actual_addressGrp}    trans_to_int    ${addressGrp_total}
+    log to console    actual address group=${actual_addressGrp}
+    Click element    xpath=//*[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    3
+    Click element    xpath=//li[@title="Delete all custom address object groups"]
+    sleep    1
+    confirm action
+    ${time}    set variable    600
+    read_console_log    ${type}    ${time}    ${case_name}
+    close browser
+    ###写入测试结果##
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    1    ${actual_addressGrp}
+    ${address-g_result}    set variable    ${max_addressGrp}/${actual_addressGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    1    ${address-g_result}
+    ###Check是否删除成功###
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    8
+    Click element    xpath=//*[@href="addrObjView.html"]
+    sleep    100
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//li[@id="grpFolder_trigger"]
+    Comment    Capture Page Screenshot
+    sleep    100
+    ${addressGrp_remain0}    get element attribute    xpath=//table[@id="grpFolderTableFooterId"]//span[4]/span    title
+    ${addressGrp_remain1}    evaluate    '${addressGrp_remain0}'.split(' ')[0]
+    ${addressGrp_remain}    trans_to_int    ${addressGrp_remain1}
+    log to console    After 600+s, addressGrp_remain=${addressGrp_remain}
+    run keyword if    ${actual_addressGrp}==${addressGrp_remain}    run keywords    log to console    addressGrp_remain:${addressGrp_remain}==actual_addressGrp:${actual_addressGrp}; DELETED ALL FAILD!!
+    ...    AND    recover_orig_conf    ${type}
+    ...    ELSE IF    1000<${addressGrp_remain}<${actual_addressGrp}    run keywords    log to console    After 600+s,just deleted a part of Address Objects!
+    ...    AND    recover_orig_conf    ${type}
+    ...    ELSE    run keywords    log to console    Deleted all objects successfully!
+    ...    AND    recover_orig_conf    ${type}
+    [Teardown]    close all browsers
+
+recover_orig_conf
+    [Arguments]    ${type}
+    ###恢复原始配置###
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    sleep    200
+    config firewall    ${type}
+
+del_addressObj_bigBox
+    [Arguments]    ${type}    ${init_value}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###删除所有连接###
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    Telnet.write    no address-objects
+    sleep    30
+    Telnet.write    commit
+    sleep    600
+    Telnet.close connection
+    ${curr_value1}    ${max_value1}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    Telnet.close connection
+    log to console    After 500+s, remain AO=${curr_value1}
+    run keyword if    '${curr_value1}' == '${init_value}'    log to console    delete all objects successfully!!
+    ...    ELSE IF    '${curr_value1}' == '${max_value1}'    run keywords    log to console    FAILED TO DELETED ALL OBJECTS!
+    ...    AND    recover_orig_conf    ${type}
+    ...    ELSE    run keywords    log to console    After 500+s, just deleted a part of address objects but not all!
+    ...    AND    recover_orig_conf    ${type}
+
+delete_X0_dhcpRanges
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Comment    Click element    css=[href="guestServiceSettings.html"]
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    Click element    xpath=//*[@href="dhcpServerView.html"]
+    sleep    10
+    Capture Page Screenshot
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    //*[@title="Delete this entry"]
+    sleep    2
+    confirm action
+    sleep    10
+    Capture Page Screenshot
+    close browser
+
+get_delete_dhcp
+    [Arguments]    ${type}    ${max_dhcp}
+    ###获取当前dhcp总数###
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    2
+    Click element    xpath=//*[@href="dhcpServerView.html"]
+    Capture Page Screenshot
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    ${text}    get text    xpath=//tr/td[2]/table/tbody/tr
+    ${text1}    evaluate    '${text}'.split('of ')[-1]
+    ${actual_dhcp}    evaluate    '${text1}'.replace(')',' ')
+    log to console    actual_dhcp=${actual_dhcp}
+    ###将最大值写入TSR表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    16    ${actual_dhcp}
+    ${dhcp_result}    set variable    ${max_dhcp}/${actual_dhcp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    16    ${dhcp_result}
+    ###删除所有dhcp连接###
+    execute javascript    window.delAllObjects(0)
+    sleep    4
+    confirm action
+    sleep    100
+    Capture Page Screenshot
+    ${text0}    get text    xpath=//tr/td[2]/table/tbody/tr
+    ${text01}    evaluate    '${text0}'.split('of ')[-1]
+    ${remain_dhcp}    evaluate    '${text01}'.replace(')',' ')
+    log to console    remain_dhcp=${remain_dhcp}
+    run keyword if    ${remain_dhcp}==0    log to console    Deleted all dhcp successfully!
+    ...    ELSE    Failed to delete all dhcp!remain_dhcp=${remain_dhcp}
+    close browser
+    [Return]    ${actual_dhcp}
+
+get_access_rules_tsr
+    [Arguments]    ${type}    ${actual_access-rule}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    sleep    200
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    Telnet.write    show tech-support-report access-rules
+    sleep    30
+    ${tsr_o}    Telnet.read
+    ${remain_accessRules}    get tsr value    ${tsr_o}    Current size:\\s+(\\d+)
+    ${max_value}    get tsr value    ${tsr_o}    Maximum total size:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    run keyword if    ${remain_accessRules}<=500    log to console    After 300+s,deleted all access rules successfully!remain_accessRules:${remain_accessRules}
+    ...    ELSE IF    ${remain_accessRules}==${actual_access-rule}    log to console    After 300+s,DELETED ALL ACCESS RULES FAILED!remain_accessRules:${remain_accessRules}==actual_access-rule:${actual_access-rule}
+    ...    ELSE    log to console    After 300+s,Just deleted a part of access rules!remain_accessRules:${remain_accessRules}
+
+get_delete_sonicpoint
+    [Arguments]    ${type}    ${max_sp}
+    ###获取当前总数###
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="wlanDashboard.html"]
+    sleep    2
+    Click element    xpath=//*[@href="wlanSonicPoints.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    1
+    select from list by value    name=ApViewStyle    0
+    sleep    10
+    Capture Page Screenshot
+    ${text}    get text    xpath=/html/body/form/div/div/table[3]/tbody/tr/td[2]/table/tbody/tr/td/table/tbody/tr/td[1]
+    ${text1}    evaluate    '${text}'.split('of ')[-1]
+    ${actual_sp}    evaluate    '${text1}'.replace(')',' ')
+    log to console    actual_sonicpoint:${actual_sp}
+    ###将最大值写入TSR表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    17    ${actual_sp}
+    ${sp_result}    set variable    ${max_sp}/${actual_sp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    17    ${sp_result}
+    ###删除所有连接###    ###delete all目前还定位不准，，先跳过删除的操作，直接factory default###
+    Comment    execute javascript    window.delAllSonicPonits()
+    Comment    Comment    click element    xpath=/html/body/form/div/div/table[4]/tbody[3]/tr/td[2]/input[1]
+    Comment    sleep    2
+    Comment    confirm action
+    Comment    sleep    60
+    Comment    Capture Page Screenshot
+    Comment    ${text0}    get text    xpath=/html/body/form/div/div/table[3]/tbody/tr/td[2]/table/tbody/tr/td/table/tbody/tr/td[1]
+    Comment    ${text01}    evaluate    '${text0}'.split('of ')[-1]
+    Comment    ${remain_sp}    evaluate    '${text01}'.replace(')',' ')
+    Comment    log to console    remain_sp=${remain_sp}
+    Comment    run keyword if    ${remain_sp}==0    log to console    Deleted all sonicpoint successfully!
+    ...    ELSE    log to console    Failed to delete all sonicpoint!remain_sp=${remain_sp}
+    close browser
+    [Return]    ${actual_sp}
+
+load_conf_byGUI
+    [Arguments]    ${type}    ${case_name}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="systemStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="cloudBackupSettings.html"]
+    sleep    2
+    Unselect Frame
+    Select Frame    id=tabFrame
+    execute javascript    window.ieDropdown()
+    sleep    2
+    click element    xpath=//div[@id="impDropdown"]/a[1]
+    sleep    2
+    execute javascript    window.onClickProceedToImport()
+    sleep    2
+    ${foldername0}    set variable    ${type}-Cap-${version}
+    ${foldername}    set variable    ${type}-${version}-${case_name}-Log
+    ${path0}    set variable    F:\\Lucy_Working\\TestCases_Config_Automation\\${foldername0}\\${foldername}\\
+    ${exp_name}    set variable    ${type}-${case_name}.exp
+    ${path}    set variable    ${path0}${exp_name}
+    choose file    id=importFile    ${path}
+    sleep    2
+    click element    xpath=//button[@type="submit"]
+    sleep    300
+
+get_sso
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    sleep    5
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    Select Checkbox    name=guiShowInactiveUsers
+    sleep    10
+    ${text}    get text    xpath=//td[@id="pageButtons"]/table/tbody/tr
+    ${text1}    evaluate    '${text}'.split('of ')[-1]
+    ${actual_sso1}    evaluate    '${text1}'.replace(')',' ')
+    ${actual_sso}    evaluate    ${actual_sso1}-1
+    log to console    actual rest api user login:${actual_sso} \ Don't need to delete all, recover orig conf please!
+    Unselect Frame
+    Capture Page Screenshot
+    close browser
+    [Return]    ${actual_sso}
+
+sslvpn_loopRun
+    [Arguments]    ${num}    ${script_name}
+    : FOR    ${i}    IN RANGE    0    ${num}
+    \    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    \    SSHLibrary.Login    root    password    delay=5
+    \    SSHLibrary.Write    cd /root/sslvpn
+    \    log to console    Start ${i}th running!
+    \    SSHLibrary.Write    ./${script_name}
+    \    sleep    2000
+    \    ${rtn2}    SSHLibrary.read
+    \    log    ${rtn2}
+    SSHLibrary.close connection
+
+get_delete_sslvpn
+    [Arguments]    ${type}    ${max_sslvpn}
+    turn_to_classicMode    ${type}
+    sleep    5
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="sslvpnStatus.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    ${sslvpn_total1}    get element attribute    xpath=//table[@id="ActSessFolderTableFooterId"]//span[3]/span    title
+    ${sslvpn_total}    evaluate    '${sslvpn_total1}'.split(' ')[0]
+    ${actual_sslvpn}    trans_to_int    ${sslvpn_total}
+    log to console    actual sslvpn:${actual_sslvpn}
+    Capture Page Screenshot
+    ###写入测试结果##
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    30    ${actual_sslvpn}
+    ${sslvpn_result}    set variable    ${max_sslvpn}/${actual_sslvpn}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    30    ${sslvpn_result}
+    ###删除所有连接###
+    Click element    xpath=//*[@class="toolbarAction swlDelAction actionWithDropdown"]
+    sleep    3
+    Click element    xpath=//li[@title="Disconnect all users"]
+    sleep    1
+    Confirm action
+    sleep    60
+    Capture Page Screenshot
+    ${sslvpn_total01}    get element attribute    xpath=//table[@id="ActSessFolderTableFooterId"]//span[3]/span    title
+    ${sslvpn_total0}    evaluate    '${sslvpn_total01}'.split(' ')[0]
+    ${remain_sslvpn}    trans_to_int    ${sslvpn_total0}
+    log to console    remain sslvpn:${remain_sslvpn}
+    run keyword if    ${remain_sslvpn}==0    log to console    Deleted all ssl vpn connections successfully!!remain sslvpn:${remain_sslvpn}
+    ...    ELSE    log to console    Failded to delete all sslvpn connections!remain sslvpn:${remain_sslvpn}
+    close browser
+    [Return]    ${actual_sslvpn}
+
+sso_loopRun
+    [Arguments]    ${num_loop}    ${script_name}    ${type}
+    log to console    Add 6000 every time!
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    : FOR    ${i}    IN RANGE    1    ${num_loop}
+    \    SSHLibrary.Open Connection    10.7.4.52    port= 22    timeout=5
+    \    SSHLibrary.Login    root    password    delay=5
+    \    SSHLibrary.Write    cd /root/scripts/restapi
+    \    ${max}    evaluate    6000*${i}
+    \    ${int0}    evaluate    (${i}-1)*6000+1
+    \    SSHLibrary.Write    sed \ 's/3000/${max}/g' \ testapi_system_max_addbyjson_RF_cap.py > ${script_name}
+    \    sleep    2
+    \    ${rtn}    SSHLibrary.read
+    \    sleep    3
+    \    log    ${rtn}
+    \    ${value}=    check_if_contain    ${rtn}    Read-only file system
+    \    Run keyword if    ${value}== 1    run keywords    SSHLibrary.Write    reboot
+    \    ...    AND    sleep    300
+    \    ...    AND    SSHLibrary.close connection
+    \    ...    AND    sso_bed_login
+    \    SSHLibrary.Write    sed \ 's/3000/${max}/g' \ testapi_system_max_addbyjson_RF_cap.py > ${script_name}
+    \    sleep    2
+    \    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    \    sleep    1
+    \    SSHLibrary.Write    sed -i 's/i=1/i=${int0}/g' \ ${script_name}
+    \    sleep    1
+    \    SSHLibrary.Write    chmod 777 ${script_name}
+    \    sleep    3
+    \    SSHLibrary.Write    python3 ${script_name}
+    \    sleep    600
+    \    ${rtn}    SSHLibrary.Read
+    \    log    ${rtn}
+    \    SSHLibrary.Write    rm -rf ${script_name}
+    \    sleep    2
+    \    SSHLibrary.close connection
+    \    log to console    Finished ${i} run!
+
+sso_lastRun
+    [Arguments]    ${max_sso}    ${script_name}    ${type}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${num_last}    evaluate    ${max_sso}%6000
+    ${int_last}    evaluate    (${max_sso}-${num_last})+1
+    ${max_last}    evaluate    ${max_sso}+2
+    SSHLibrary.Open Connection    10.7.4.52    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/scripts/restapi
+    SSHLibrary.Write    sed \ 's/3000/${max_last}/g' \ testapi_system_max_addbyjson_RF_cap.py > ${script_name}
+    sleep    1
+    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    sed -i 's/i=1/i=${int_last}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    SSHLibrary.Write    python3 ${script_name}
+    ${time}    evaluate    ${num_last}/9+100
+    sleep    ${time}
+    ${rtn}    SSHLibrary.Read
+    log    ${rtn}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    2
+    SSHLibrary.close connection
+    log to console    Finished the last run!
+
+sso_more6000
+    [Arguments]    ${type}    ${max_sso}    ${script_name}
+    ${num_loop0}    evaluate    ${max_sso}/6000
+    ${num_loop}    evaluate    ${num_loop0} +1
+    ${num_last}    evaluate    ${max_sso}%6000
+    ###每次添加6000条，因为后台运行脚本的时候每次都只能添加6000多条###
+    sso_loopRun    ${num_loop}    ${script_name}    ${type}
+    ###最后一次添加最后的数目###
+    run keyword if    ${num_last} !=0    sso_lastRun    ${max_sso}    ${script_name}    ${type}
+
+sso_less6000
+    [Arguments]    ${type}    ${max_sso}    ${script_name}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    SSHLibrary.Open Connection    10.7.4.52    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/scripts/restapi
+    sleep    1
+    SSHLibrary.Write    sed \ 's/3000/${max_sso}/g' \ testapi_system_max_addbyjson_RF_cap.py > ${script_name}
+    sleep    1
+    ${rtn}    SSHLibrary.read
+    sleep    3
+    log    ${rtn}
+    ${value}=    check_if_contain    ${rtn}    Read-only file system
+    Run keyword if    ${value}== 1    run keywords    SSHLibrary.Write    reboot
+    ...    AND    sleep    300
+    ...    AND    SSHLibrary.close connection
+    ...    AND    sso_bed_login
+    SSHLibrary.Write    sed \ 's/3000/${max_sso}/g' \ testapi_system_max_addbyjson_RF_cap.py > ${script_name}
+    sleep    1
+    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    SSHLibrary.Write    python3 ${script_name}
+    ${time}    evaluate    ${max_sso}/10+100
+    sleep    ${time}
+    ${rtn}    SSHLibrary.Read
+    log    ${rtn}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    2
+    SSHLibrary.close connection
+
+Config_SSO
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="usersStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="usersSettingsView.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    5
+    select from list by value    id=usrAuthMethod    4
+    sleep    2
+    click element    id=autoLognCfgBtn
+    ${titles}    Get Window Titles
+    ${titles1}    Get From List    ${titles}    0
+    ${titles2}    Get From List    ${titles}    1
+    log to console    titles1:${titles1};titles2:${titles2}
+    Unselect Frame
+    Select Window    title=${titles2}
+    select Frame    xpath=//*[contains(@src,'ssoAuthProps.html')]
+    sleep    2
+    Click element    xpath=//a[@title="3rd Party API"]
+    sleep    2
+    click element    xpath=//input[@title="Add a new API Client"]
+    sleep    2
+    input text    id=apiClientHost    10.7.4.52
+    input text    id=apiClientSecret    sonicwall2010
+    input text    id=apiClientCnfSecret    sonicwall2010
+    sleep    2
+    click element    xpath=/html/body/div[3]/div/div/div/div/div/div/div/div/div[2]/div[3]/div/input[1]
+    sleep    4
+    execute javascript    window.selectRestApiTab(1)
+    sleep    2
+    Select checkbox    id=ssoRestApiEnabled
+    sleep    2
+    Unselect checkbox    id=restApiPortCbox
+    sleep    2
+    Clear Element Text    id=restApiPortNum
+    sleep    1
+    input text    id=restApiPortNum    3443
+    sleep    1
+    click element    name=ApplyBtn
+    sleep    5
+    click element    name=OkBtn
+    sleep    5
+    select Window    title=${titles1}
+    Select Frame    id=tabFrame
+    click element    id=divAuthentication_trigger
+    sleep    2
+    click element    xpath=//input[@value="Configure LDAP"]
+    sleep    6
+    ${titles0}    Get Window Titles
+    ${titles01}    Get From List    ${titles0}    0
+    ${titles02}    Get From List    ${titles0}    1
+    log to console    titles01:${titles01};titles02:${titles02}
+    Unselect Frame
+    select Window    title=${titles02}
+    select Frame    xpath=//*[contains(@src,'ldapProps.html')]
+    click element    xpath=//input[@title="Add a new server"]
+    sleep    2
+    Clear Element Text    id=srvrName
+    input text    id=srvrName    10.7.2.28
+    select from list by value    id=srvrPortsSel    389
+    unselect checkbox    id=srvrUseTls
+    sleep    1
+    confirm action
+    sleep    2
+    execute javascript    window.selectSrvrTab(1)
+    click element    id=srvrBindType1
+    sleep    2
+    input text    id=srvrBindName    root
+    input text    id=srvrBindPwd    123abc,./
+    sleep    1
+    execute javascript    window.selectSrvrTab(3)
+    sleep    2
+    Clear Element Text    id=srvrUsrDomain
+    input text    id=srvrUsrDomain    smallbusiness.local
+    sleep    2
+    click element    id=autoConfig
+    Confirm action
+    sleep    2
+    click element    xpath=//input[@value="Start"]
+    sleep    5
+    click element    xpath=//input[@value="Save"]
+    sleep    2
+    click element    name=OkBtn
+    sleep    10
+    select Window    title=${titles01}
+    Select Frame    id=tabFrame
+    click element    id=divUserSessions_trigger
+    sleep    2
+    Clear Element Text    name=inactiveUserAgeOutMins
+    input text    name=inactiveUserAgeOutMins    6000
+    sleep    4
+    click element    id=divAuthentication_trigger
+    sleep    5
+    Click element    xpath=//*[@id="applyButt"]
+    sleep    5
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Handle Alert    action=ACCEPT
+    sleep    3
+    [Teardown]    close browser
+
+register_sslvpn
+    [Arguments]    ${type}
+    @{data}=    read xls file    sslvpn_license.xlsx    sslvpn
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="systemStatusView.html"]
+    sleep    2
+    Click element    xpath=//*[@href="activationView.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//*[@href="/Security_Services/Registration.html"]
+    sleep    3
+    Clear Element Text    name=login
+    sleep    1
+    input text    name=login    shsystem@163.com
+    sleep    1
+    Clear Element Text    name=pwd
+    sleep    1
+    input text    name=pwd    sonicwall
+    sleep    2
+    click element    name=Submit
+    sleep    3
+    : FOR    ${i}    IN RANGE    0    2
+    \    click element    xpath=/html/body/table[2]/tbody/tr[16]/td[3]/a
+    \    sleep    3
+    \    ${j}    evaluate    ${i}*5
+    \    Comment    Clear Element Text    name=1key0
+    \    Clear Element Text    xpath=/html/body/form/table[1]/tbody/tr[1]/td[3]/input
+    \    input text    xpath=/html/body/form/table[1]/tbody/tr[1]/td[3]/input    ${data[${j}]["keys"]}
+    \    ${j1}    evaluate    ${j}+1
+    \    Clear Element Text    xpath=/html/body/form/table[1]/tbody/tr[3]/td[3]/input
+    \    input text    xpath=/html/body/form/table[1]/tbody/tr[3]/td[3]/input    ${data[${j1}]["keys"]}
+    \    ${j2}    evaluate    ${j1}+2
+    \    Clear Element Text    xpath=/html/body/form/table[1]/tbody/tr[5]/td[3]/input
+    \    input text    xpath=/html/body/form/table[1]/tbody/tr[5]/td[3]/input    ${data[${j2}]["keys"]}
+    \    ${j3}    evaluate    ${j2}+1
+    \    Clear Element Text    xpath=/html/body/form/table[1]/tbody/tr[7]/td[3]/input
+    \    input text    xpath=/html/body/form/table[1]/tbody/tr[7]/td[3]/input    ${data[${j3}]["keys"]}
+    \    ${j4}    evaluate    ${j3}+1
+    \    Clear Element Text    xpath=/html/body/form/table[1]/tbody/tr[9]/td[3]/input
+    \    input text    xpath=/html/body/form/table[1]/tbody/tr[9]/td[3]/input    ${data[${j4}]["keys"]}
+    \    ${j5}    evaluate    ${j4}+1
+    \    click element    xpath=//input[@value="Submit"]
+    \    sleep    2
+    \    click element    xpath=//input[@value="Upgrade"]
+    \    sleep    3
+    [Teardown]    close browser
+
+config_sslvpn
+    [Arguments]    ${ip}    ${port}
+    CLI-login-firewall    ${ip}    ${port}
+    Telnet.write    ssl-vpn server
+    sleep    1
+    Telnet.write    access WAN
+    Telnet.write    session-timeout 9999
+    Telnet.write    commit
+    sleep    10
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+    Telnet.write    exit
+    sleep    1
+    Telnet.write    ssl-vpn profile
+    sleep    2
+    Telnet.write    device-profile "Default Device Profile"
+    sleep    2
+    Telnet.write    network-address ipv4 network 12.1.0.0 /16
+    sleep    3
+    ${rtn}    Telnet.read
+    ${a}=    check_if_contain    ${rtn}    [yes]:
+    Run keyword if    ${a} == 1    Telnet.write    yes
+    ...    ELSE    sleep    1
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+    Telnet.write    routes
+    Telnet.write    route name "X0 Subnet"
+    Telnet.write    commit
+    sleep    10
+    Telnet.write    exit
+    Telnet.write    exit
+    Telnet.write    exit
+    Telnet.write    user local
+    Telnet.write    user test
+    Telnet.write    password sonicwall2010
+    Telnet.write    member-of "SSLVPN Services"
+    Telnet.write    vpn-client-access name "X0 Subnet"
+    Telnet.write    commit
+    sleep    10
+    Telnet.close connection
+
+runPhase2_bigbox
+    [Arguments]    ${host_ip}    ${max_phase2}
+    ${num}    evaluate    ${max_phase2}/20
+    ${run_time0}    evaluate    ${num}/3+100
+    SSHLibrary.Write    \\cp -r phase2_group_0.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_0.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase2-group -n 20    100
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol -n ${num}    ${run_time0}
+    SSHLibrary.close connection
+
+runPhase2_smallbox
+    [Arguments]    ${host_ip}    ${max_phase2}    ${max_S2S}
+    ${num1}    evaluate    ${max_phase2}/${max_S2S}
+    ${num2}    evaluate    ${max_S2S}-1
+    ${run_time1}    evaluate    ${num2}/3+100
+    ${num01}    evaluate    ${max_phase2}-${num1}*${num2}
+    SSHLibrary.Write    \\cp -r phase2_group_0.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_0.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase2-group -n ${num1}    100
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol -n ${num2}    ${run_time1}
+    SSHLibrary.Write    \\cp -r phase2_group_1.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_1.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase2-group -n ${num01}    100
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol -n 2    100
+    SSHLibrary.close connection
+
+log_to_xlsx
+    [Arguments]    ${type}    ${col}    ${log_content}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    4    ${col}    ${log_content}
+
+config_wan_grpVPN
+    [Arguments]    ${type}
+    ###配置X0 IP###
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    CLI-config-Test-LAN-X0    ${data[0]["LAN PORT"]}    172.1.1.1    255.255.0.0
+    telnet.close connection
+    ###配置Phase1###
+    turn_to_classicMode    ${type}
+    sleep    20
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    20
+    Click element    xpath=//*[@href="zoneObjView.html"]
+    sleep    30
+    Unselect Frame
+    Select Frame    id=tabFrame
+    execute javascript    window.editZoneObj(7)
+    sleep    10
+    Unselect Frame
+    ${titles}    Get Window Titles
+    ${titles1}    Get From List    ${titles}    0
+    ${titles2}    Get From List    ${titles}    1
+    log to console    titles1:${titles1};titles2:${titles2}
+    Select Window    title=${titles2}
+    sleep    5
+    Select checkbox    id=zoGroupVpn0
+    sleep    1
+    Capture Page Screenshot
+    Click element    name=ok
+    sleep    2
+    Select Window    title=${titles1}
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="vpnSettingsView.html"]
+    sleep    5
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    ${peer_ID}    Get Element Attribute    name=firewallId@value
+    sleep    2
+    Select checkbox    name=uiEnableVpnPolicy_0
+    sleep    2
+    Comment    Click element    xpath=//img[@alt="Edit this entry"]
+    Click element    xpath=/html/body/div[1]/form/div[2]/div/div[6]/table/tbody/tr/td[9]/a[1]/img
+    sleep    4
+    ${titles0}    Get Window Titles
+    ${titles01}    Get From List    ${titles0}    0
+    ${titles02}    Get From List    ${titles0}    1
+    log to console    titles01:${titles01};titles02:${titles02}
+    select Window    title=${titles02}
+    ${shared_key}    Get Element Attribute    name=ipsecESPKey@value
+    ${Ixia_info}    set variable    Pre Shared Key:${shared_key}; Peer ID Value:${peer_ID}
+    log to console    Ixiaload conf info: ${Ixia_info}
+    log to xlsx    ${type}    28    ${Ixia_info}
+    sleep    2
+    Click element    id=tab_background_3
+    sleep    2
+    Unselect checkbox    id=ipsecXauthClient
+    sleep    2
+    Select from list by value    id=ipsecNoAuthAccessNetwork    X0 Subnet
+    sleep    2
+    Click element    name=ok
+    sleep    2
+    [Teardown]    Close All Browsers
+
+setVariable_for_if
+    [Arguments]    ${text1}    ${text2}
+    ${text1}    set variable    ${text2}
+    [Return]    ${text1}
+
+sslvpn_10.7.3.251
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/4600-59
+    SSHLibrary.Write    sed \ 's/102/100/g' \ associate_RF_cap.sh > ${script_name}
+    sleep    1
+    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    sslvpn_loopRun    ${num}    ${script_name}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    2
+    SSHLibrary.close connection
+
+sslvpn_lastRun
+    [Arguments]    ${script_name}
+    : FOR    ${i}    IN RANGE    0    1
+    \    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    \    SSHLibrary.Login    root    password    delay=5
+    \    SSHLibrary.Write    cd /root/sslvpn
+    \    log to console    Start the last running!
+    \    SSHLibrary.Write    ./${script_name}
+    \    sleep    900
+
+get_default_addressGroup
+    [Arguments]    ${type}
+    turn_to_classicMode    ${type}
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="netInterfaces.html"]
+    sleep    5
+    Click element    xpath=//*[@href="addrObjView.html"]
+    sleep    60
+    Unselect Frame
+    Select Frame    id=tabFrame
+    Click element    xpath=//li[@id="grpFolder_trigger"]
+    Comment    Capture Page Screenshot
+    sleep    60
+    ${addressGrp_total1}    get element attribute    xpath=//table[@id="grpFolderTableFooterId"]//span[4]/span    title
+    ${addressGrp_total}    evaluate    '${addressGrp_total1}'.split(' ')[0]
+    ${default_addressGrp}    trans_to_int    ${addressGrp_total}
+    log to console    default address group=${default_addressGrp}
+    [Teardown]    Close All Browsers
+    [Return]    ${default_addressGrp}
+
+vlan_loopRun
+    [Arguments]    ${type}    ${case_name}    ${tb_ip}    ${max_vlan}
+    ${num_total}    evaluate    ${max_vlan}+2
+    ${num1}    evaluate    ${num_total}/100
+    ${num_last}    evaluate    ${num_total}%100
+    ${script_name}    evaluate    'vlan_multi_3'+'_'+'${type}'+'.py'
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    : FOR    ${i}    IN RANGE    0    ${num1}
+    \    ssh_login_capBed    ${tb_ip}
+    \    ${ip_a}    evaluate    15+${i}
+    \    SSHLibrary.Write    sed \ 's/15/${ip_a}/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    \    sleep    1
+    \    SSHLibrary.Write    chmod 777 ${script_name}
+    \    sleep    3
+    \    ${init}    evaluate    ${i}*100+1
+    \    ${num}    evaluate    (${i}+1)*100
+    \    ssh_execute_commands    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn ${init} -en ${num}    2000
+    \    log to console    Finished ${i}+1 run!
+    \    SSHLibrary.Write    rm -rf ${script_name}
+    \    sleep    10
+    \    SSHLibrary.close connection
+
+vlan_lastRun
+    [Arguments]    ${type}    ${case_name}    ${tb_ip}    ${max_vlan}
+    ${num_total}    evaluate    ${max_vlan}+2
+    ${num1}    evaluate    ${num_total}/100
+    ${num_last}    evaluate    ${num_total}%100
+    ${script_name}    evaluate    'vlan_multi_3'+'_'+'${type}'+'.py'
+    ${ip_a}    set variable    35
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    sed \ 's/15/${ip_a}/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ${init}    evaluate    ${num1}*100+1
+    ssh_execute_commands    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn ${init} -en ${num_last}    2000
+    log to console    Finished the last run!
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    10
+    SSHLibrary.close connection
+
+vlan_twoRun
+    [Arguments]    ${type}    ${case_name}    ${tb_ip}    ${num}
+    ${num1}    evaluate    ${num}-200
+    ${script_name}    evaluate    'vlan_multi_3'+'_'+'${type}'+'.py'
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###添加200个###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    sed \ 's/= 15/= 16/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    sleep    2
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ssh_execute_command    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn 1 -en 200    4000    ${type}    ${case_name}
+    log to console    Finished 200 addition!
+    ###删除临时脚本###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    10
+    SSHLibrary.close connection
+    ###添加剩下的###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    sed \ 's/= 15/= 18/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    sleep    2
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ${time}    evaluate    ${num1}*22
+    ssh_execute_command    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn 201 -en ${num}    ${time}    ${type}    ${case_name}
+    log to console    Finished ${num1} addition!
+    ###删除临时脚本###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    10
+    SSHLibrary.close connection
+    log to console    Deleted ${script_name}
+
+vlan_oneRun
+    [Arguments]    ${type}    ${case_name}    ${tb_ip}    ${num}
+    ${script_name}    evaluate    'vlan_multi_3'+'_'+'${type}'+'.py'
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###添加剩下的###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    sed \ 's/= 15/= 19/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    sleep    2
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ${time}    evaluate    ${num}*22
+    ssh_execute_command    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn 1 -en ${num}    ${time}    ${type}    ${case_name}
+    log to console    Finished ${num} addition!
+    ###删除临时脚本###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    10
+    SSHLibrary.close connection
+    log to console    Deleted ${script_name}
+
+sslvpn_bed_login
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/sslvpn
+
+addTunnelInterface_more100
+    [Arguments]    ${type}    ${num1}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    : FOR    ${i}    IN RANGE    1    101
+    \    telnet.write    tunnel-interface vpn V_T_I_${i}
+    \    telnet.write    policy test${i}
+    \    sleep    1
+    \    telnet.write    ip-assignment VPN static
+    \    sleep    2
+    \    telnet.write    ip 10.${i}.1.1
+    \    telnet.write    netmask 255.255.255.0
+    \    telnet.write    commit
+    \    sleep    6
+    \    ${rtn1}    telnet.read
+    \    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    EXIT for loop if    ${a}!=1
+    \    telnet.write    exit
+    \    sleep    1
+    \    telnet.write    exit
+    \    sleep    3
+    telnet.close connection
+    ###分两次加###    ###add to 156,session timeout###
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    : FOR    ${i}    IN RANGE    101    ${num1}
+    \    telnet.write    tunnel-interface vpn V_T_I_${i}
+    \    sleep    3
+    \    telnet.write    policy test${i}
+    \    sleep    3
+    \    telnet.write    ip-assignment VPN static
+    \    sleep    3
+    \    telnet.write    ip 10.${i}.1.1
+    \    sleep    1
+    \    telnet.write    netmask 255.255.255.0
+    \    sleep    1
+    \    telnet.write    commit
+    \    sleep    6
+    \    ${rtn1}    telnet.read
+    \    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    EXIT for loop if    ${a}!=1
+    \    telnet.write    exit
+    \    sleep    1
+    \    telnet.write    exit
+    \    sleep    3
+    telnet.close connection
+
+addTunnelInterface_less100
+    [Arguments]    ${type}    ${num1}
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    : FOR    ${i}    IN RANGE    1    ${num1}
+    \    telnet.write    tunnel-interface vpn V_T_I_${i}
+    \    sleep    1
+    \    telnet.write    policy test${i}
+    \    sleep    1
+    \    telnet.write    ip-assignment VPN static
+    \    sleep    2
+    \    telnet.write    ip 10.${i}.1.1
+    \    telnet.write    netmask 255.255.255.0
+    \    telnet.write    commit
+    \    sleep    10
+    \    ${rtn1}    telnet.read
+    \    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    EXIT for loop if    ${a}!=1
+    \    telnet.write    exit
+    \    sleep    1
+    \    telnet.write    exit
+    \    sleep    3
+    telnet.close connection
+
+login_by_https_oneLogin
+    [Arguments]    ${ip}    ${username}    ${password}    ${webbrowser}
+    Open Browser    https://${ip}    ${webbrowser}
+    sleep    5
+    Select Frame    id=authFrm
+    Clear Element Text    id=userName
+    Input Text    id=userName    admin
+    Clear Element Text    name=pwd
+    Input Password    name=pwd    password
+    ${value}    Get Value    name=pwd
+    log    ${value}
+    sleep    1
+    Click Button    name=Submit
+    sleep    5
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    OK to preempt existing administrator?
+    run keyword if    '${result}' == 'PASS'    Click Button    name=Continue
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    This appliance is not registered
+    run keyword if    '${result}' == 'PASS'    Click Element    id=regLaterButt
+    sleep    5
+
+twoLogin
+    Select Frame    id=authFrm
+    Clear Element Text    id=userName
+    Input Text    id=userName    admin
+    Clear Element Text    name=pwd
+    Input Password    name=pwd    password
+    ${value}    Get Value    name=pwd
+    Click Button    name=Submit
+    sleep    10
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    This appliance is not registered
+    run keyword if    '${result}' == 'PASS'    Click Element    id=regLaterButt
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Page Should Contain    OK to preempt existing administrator?
+    run keyword if    '${result}' == 'PASS'    Click Button    name=Continue
+    sleep    1
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Handle Alert    action=ACCEPT
+    sleep    1
+
+check_curr_sslvpn
+    [Arguments]    ${type}    ${maximum_sslvpn}
+    turn_to_classicMode    ${type}
+    sleep    5
+    Unselect Frame
+    Select Frame    id=outlookFrame
+    Click element    xpath=//*[@href="sslvpnStatus.html"]
+    sleep    10
+    Unselect Frame
+    Select Frame    id=tabFrame
+    sleep    2
+    ${sslvpn_total1}    get element attribute    xpath=//table[@id="ActSessFolderTableFooterId"]//span[3]/span    title
+    ${sslvpn_total}    evaluate    '${sslvpn_total1}'.split(' ')[0]
+    ${curr_sslvpn}    trans_to_int    ${sslvpn_total}
+    log to console    curr sslvpn:${curr_sslvpn}
+    ${more}    evaluate    ${maximum_sslvpn}-${curr_sslvpn}
+    Capture Page Screenshot
+    run keyword if    ${curr_sslvpn}==${maximum_sslvpn}    log to console    Reached the maximum! No need to add more sslvpn!
+    ...    ELSE    log to console    curr sslvpn:${curr_sslvpn} Need to add ${more} sslvpn to reach the maximum!
+    close browser
+    [Return]    ${more}
+
+sonicpoint_more260
+    [Arguments]    ${X2_IP}    ${type}    ${case_name}    ${TB1_eth2_IP}    ${TB2_eth2_IP}
+    ###分两次，避免out of memory的问题###
+    ssh_login_capBed    10.7.3.253
+    SSHLibrary.Write    ifconfig eth2 ${TB1_eth2_IP} netmask 255.255.0.0
+    sleep    3
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X2_IP} -o sp -n 300    200    ${type}    ${case_name}
+    ###第二次###
+    ssh_login_capBed    10.7.3.250
+    SSHLibrary.Write    ifconfig eth2 ${TB2_eth2_IP} netmask 255.255.0.0
+    sleep    3
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X2_IP} -o sp -n 300    200    ${type}    ${case_name}
+
+sonicpoint_less260
+    [Arguments]    ${X2_IP}    ${type}    ${case_name}    ${TB1_eth2_IP}    ${num}
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    ifconfig eth2 ${TB1_eth2_IP} netmask 255.255.0.0
+    sleep    3
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X2_IP} -o sp -n ${num}    200    ${type}    ${case_name}
+
+sso_bed_login
+    SSHLibrary.Open Connection    10.7.4.52    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/scripts/restapi
+    sleep    2
+
+vlan_addMore
+    [Arguments]    ${type}    ${case_name}    ${tb_ip}    ${start_num}    ${end_num}
+    ${script_name}    evaluate    'vlan_multi_3'+'_'+'${type}'+'.py'
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###添加剩下的###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    sed \ 's/= 15/= 44/g' \ vlan_multi_3_RF_Cap_x0.pl > ${script_name}
+    sleep    2
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ${time}    evaluate    ${num}*22
+    ssh_execute_command    perl /root/capacityTB//scripts/${script_name} -fw ${host_ip} -sn ${start_num} -en ${end_num}    ${time}    ${type}    ${case_name}
+    log to console    Finished ${num} addition!
+    ###删除临时脚本###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    10
+    SSHLibrary.close connection
+    log to console    Deleted ${script_name}

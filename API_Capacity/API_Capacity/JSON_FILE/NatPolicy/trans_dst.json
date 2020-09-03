@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "tra_dst",
+                "zone": "LAN",
+                "host": {
+                    "ip": "8.2.2.10"
+                }
+            }
+        }
+    ]
+}

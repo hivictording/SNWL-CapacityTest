@@ -1,0 +1,1539 @@
+*** Settings ***
+Library           Telnet
+Library           Sonicwall
+Library           Collections
+Resource          ../keyword/keyword.txt
+Library           Selenium2Library
+Library           DateTime
+Library           SSHLibrary
+
+*** Variables ***
+@{equipment_type}    9250    # 待测试设备类型：TZ-600P,3650-9650, 3600-6600,9200-9800,SOHO-250,TZ-350。列表形式，顺序执行
+${location}       F:/Lucy_Working/TestCases_Config_Automation    # 配置保存地址，注意是斜杠方向”/"
+${ftp_username}    admin    # ftp 用户名
+${ftp_password}    admin    # ftp密码
+${ftpServer_ip}    10.103.18.253    # ftp服务器ip
+${version}        6.5.4.1-23n    # 待测试版本号,格式如：6.5.1.2-52n，6.5.2.1-31n,6.5.2.0-12n，6.5.2.2-39n,6.5.4.0-14n,6.5.4.1-19n。。ftp服务器上需要设置\\10.190.202.40\FIRMWARE\NG 为ftp下载根目录.
+${tb_ip}          10.7.3.253
+${ftp_username1}    luli
+${ftp_password1}    password
+
+*** Test Cases ***
+Capacity_test_Init
+    [Template]    CapacityTestCase
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+load conf
+    ${type}    set variable    SOHO-250
+    ${case_name0}    set variable    SSO
+    ${case_name1}    set variable    forPhase1
+    ${case_name2}    set variable    access_rule
+    ${case_name3}    set variable    tunnelInterface
+    ${case_name4}    set variable    VLANs
+    ${case_name5}    set variable    Zones
+    ${case_name6}    set variable    addressGrp
+    ${case_name7}    set variable    addressObj
+    load_conf_byGUI    ${type}    ${case_name1}
+    close all browsers
+
+123
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    9250
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    : FOR    ${i}    IN RANGE    172    193
+    \    telnet.write    tunnel-interface vpn V_T_I_${i}
+    \    sleep    3
+    \    telnet.write    policy test${i}
+    \    sleep    3
+    \    telnet.write    ip-assignment VPN static
+    \    sleep    2
+    \    telnet.write    ip 10.${i}.1.1
+    \    telnet.write    netmask 255.255.255.0
+    \    telnet.write    commit
+    \    sleep    5
+    \    ${rtn1}    telnet.read
+    \    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    EXIT for loop if    ${a}!=1
+    \    telnet.write    exit
+    \    sleep    1
+    \    telnet.write    exit
+    \    sleep    3
+    telnet.close connection
+
+user-g
+    [Setup]
+    [Template]    user-g
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    150
+    [Teardown]    close all browsers
+
+arp
+    [Setup]
+    [Template]    arp
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    100
+    [Teardown]    close all browsers
+
+schedule objects
+    [Setup]
+    [Template]    schedule objects
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    150
+    [Teardown]    close all browsers
+
+local_user
+    [Setup]
+    [Template]    local-user
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    250
+    [Teardown]    close all browsers
+
+guest_user
+    [Setup]
+    [Template]    guest_user
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    100
+    [Teardown]    close all browsers
+
+Service Object
+    [Setup]
+    [Template]    Service Objects
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    200
+    [Teardown]    close all browsers
+
+Service group depth
+    [Setup]
+    [Template]    service group depth
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    100
+    [Teardown]    close all browsers
+
+servicePerGrp
+    [Setup]
+    [Template]    service PerGrp
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    100
+    [Teardown]    close all browsers
+
+Service group
+    [Setup]
+    [Template]    service PerGrp
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    200
+    [Teardown]    close all browsers
+
+static_route
+    [Setup]
+    [Template]    static route
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    200
+    [Teardown]    close all browsers
+
+address PerGrp
+    [Setup]
+    [Template]    Address PerGrp
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    300
+    [Teardown]    close all browsers
+
+application
+    [Setup]
+    [Template]    Application
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    150
+    [Teardown]    close all browsers
+
+botnet-filter
+    [Setup]
+    [Template]    botnet-filter
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    200
+    [Teardown]    close all browsers
+
+geo-ip-filter
+    [Setup]
+    [Template]    geo-ip-filter
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    200
+    [Teardown]    close all browsers
+
+rest-api
+    [Setup]
+    [Template]    rest-api
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    100
+    [Teardown]    close all browsers
+
+s2s-vpn
+    [Setup]
+    [Template]    S2S-vpn
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+group-vpn
+    [Setup]
+    [Template]    group-vpn
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    250
+    [Teardown]    close all browsers
+
+phase2
+    [Setup]
+    [Template]    phase2
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+phase1
+    [Setup]
+    [Template]    phase1
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+nat-pol
+    [Setup]
+    [Template]    nat-policy
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}    300
+    [Teardown]    close all browsers
+
+sonicpoint
+    [Setup]
+    [Template]    sonicpoint
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+rest-api-ul
+    [Setup]
+    [Template]    rest-api-ul
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+zone
+    [Setup]
+    [Template]    zone
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+vlan
+    [Setup]
+    [Template]    vlan-new
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+address objects
+    [Setup]
+    [Template]    Address Objects
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+address group
+    [Setup]
+    [Template]    Address group
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+user-login
+    [Setup]
+    [Template]    user-login
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+access-rule
+    [Setup]
+    [Template]    access-rule
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+SSL-VPN
+    [Setup]
+    [Template]    SSL-VPN
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+tunnel-interface
+    [Setup]
+    [Template]    tunnel-interface
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+dhcp
+    [Setup]
+    [Template]    dhcp
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+address group depth
+    [Setup]
+    [Template]    Address group depth
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+*** Keywords ***
+download version
+    [Arguments]    ${type}
+    ###串口登陆，ftp下载版本###
+    log to console    START TO DOWNLOAD VERSION: ${version} !
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    log to console    start download version for ${type}
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    CLI-config_wan_ip    X1    ${data[0]["HOST_IP"]}    ${data[0]["NETMASK"]}    ${data[0]["GATEWAY"]}
+    sleep    1
+    ${result}=    tel    show version
+    sleep    1
+    ###ping gateway check####
+    Telnet.Write    ping ${data[0]["GATEWAY"]}
+    sleep    5
+    Telnet.Read Until    is alive
+    sleep    1
+    ###download###
+    ${filename}=    Get Match Filename    ${version}    ${type}
+    Comment    ${path}    evaluate    '${version_path}'.split('/')[-1]
+    ${value}=    evaluate    '''${result}'''.find('${version}')
+    run key word if    ${value} == -1    download firewall version and reboot with factory-default    ${ftp_username}    ${ftp_password}    ${ftpServer_ip}    ${filename}
+    ...    400
+    ...    ELSE    boot current factory-default    400
+    log to console    FINISHED DOWNLOAD VERSION FOR ${type}
+    Telnet.Close Connection
+    [Teardown]
+
+export orig conf and tsr
+    [Arguments]    ${type}
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###导出原始配置####
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    Create Folder    ${folder}
+    Comment    ${filename}    evaluate    '${type}'+'-'+'${version}'+'-Orig'+'.exp'
+    Comment    ${filename1}    evaluate    '${type}'+'-'+'${version}'+'-Orig'+'.wri'
+    Comment    Export_Conf    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename}
+    ...    ${type}
+    Comment    export_tsr    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename1}
+    ...    ${type}
+    Export log    ${type}    Orig
+    log to console    finish export orig config and tsr for ${type}
+    Telnet.Close Connection
+    ###获取TSR并填入表格####
+    GetTSR    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}    ${type}
+
+CapacityTestCase
+    [Arguments]    ${type}
+    ###factory default###
+    Comment    factory_default_configure    ${type}
+    Comment    config firewall    ${type}
+    ###Preparation###
+    download version    ${type}
+    config firewall    ${type}
+    export orig conf and tsr    ${type}
+    ###Start Test###
+    ###Stable Cases###
+    Comment    user-g    ${type}    150
+    Comment    arp    ${type}    100
+    Comment    schedule objects    ${type}    150
+    Comment    Application    ${type}    150
+    Comment    static route    ${type}    200
+    Comment    botnet-filter    ${type}    200
+    Comment    geo-ip-filter    ${type}    200
+    Comment    local-user    ${type}    250
+    Comment    guest_user    ${type}    100
+    Comment    Service Objects    ${type}    200
+    Comment    Service group depth    ${type}    100
+    Comment    Service PerGrp    ${type}    100
+    Comment    Service group    ${type}    200
+    Comment    Address PerGrp    ${type}    300
+    Comment    group-vpn    ${type}    250
+    Comment    phase2    ${type}
+    Comment    rest-api    ${type}    100
+    Comment    S2S-vpn    ${type}
+    Comment    phase1    ${type}
+    Comment    sonicpoint    ${type}
+    ###Unstable Cases###
+    Comment    nat-policy    ${type}    300
+    Comment    rest-api-ul    ${type}
+    Comment    user-login    ${type}
+    Comment    VLAN    ${type}
+    Comment    zone    ${type}
+    Comment    SSL-VPN    ${type}
+    Comment    vlan-new    ${type}
+    Comment    tunnel-interface    ${type}
+    Comment    user-login    ${type}
+    Comment    Address group    ${type}
+    Comment    Address Objects    ${type}
+    Comment    access-rule    ${type}
+    Comment    dhcp    ${type}
+    Comment    Address group depth    ${type}
+    ###vlan测试会遇到连接消失的情况
+    Comment    Dynamic AO    ${type}    100
+    log to console    FINISHED ${type} ${version} TEST!!
+
+Address Objects
+    [Arguments]    ${type}
+    log to console    START ADDRESS OBJECTS TEST!!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Address Objects'
+    ${case_name}    set variable    addressObj
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    log to console    default AO=${init_value};Target AO=${max_value}
+    ###跑脚本###
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ${num}    evaluate    ${max_value}+2
+    ${run_time}    evaluate    ${num}/10
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-o -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###导出配置###
+    export log    ${type}    ${case_name}
+    Telnet.close connection
+    ###获取item的初始值和target值##
+    ${current_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    address-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${AO_result}    set variable    ${max_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    0    ${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    0    ${AO_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    run keyword if    ${max_value}<=20000    del_addressObj_smallBox    ${type}    ${init_value}
+    ...    ELSE    del_addressObj_bigBox    ${type}    ${init_value}
+    log to console    FINISHED ADDRESS OBJECTS TEST!!!
+
+user-g
+    [Arguments]    ${type}    ${run_time}
+    log to console    START USER GROUP TEST!!!
+    ${default_useGrp}    get_userGrp_value    ${type}
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'User Groups'
+    ${case_name}    set variable    usrGrp
+    ${max_userGrp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target value:${max_userGrp}
+    ###跑脚本###
+    ${num}    set variable    ${max_userGrp}
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o user-g -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    ${actual_useGrp}    get_userGrp_value    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${user-g_result}    set variable    ${max_userGrp}/${actual_useGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    12    ${actual_useGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    12    ${user-g_result}
+    ###对比测试结果###
+    compared_with_target_ex    ${type}    ${test_case}    ${actual_useGrp}    ${default_useGrp}
+    ###删除所有连接数###
+    deleteAll_userGrp    ${type}    ${default_useGrp}
+    log to console    FINISHED USER GROUP TEST!!!
+    [Teardown]    close all browsers
+
+arp
+    [Arguments]    ${type}    ${run_time}
+    log to console    START ARP TEST!!!
+    ###跑脚本###
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Static ARP Entries'
+    ${case_name}    set variable    staticARP
+    ${max_arp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target value:${max_arp}
+    ${num}    evaluate    ${max_arp}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o static-arp -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    get_arpResult    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${arp_result}    set variable    300/300
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    22    ${max_arp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    22    ${arp_result}
+    ###删除所有连接###
+    CLI-noItems    ${console_ip}    ${console_port}    no arp entries
+    Telnet.close connection
+    log to console    FINISHED ARP TEST!!!
+    [Teardown]    close all browsers
+
+schedule objects
+    [Arguments]    ${type}    ${run_time}
+    log to console    START SCHEDULE OBJECTS TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Schedule Objects'
+    ${case_name}    set variable    scheduleObj
+    Comment    ${max_ao}    get_target_fromCSV    ${type}    ${test_case}
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ###跑脚本###
+    ${num}    evaluate    ${max_value}+2
+    Comment    ${time}    evaluate    3600
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o schedule-o -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果###
+    export log    ${type}    ${case_name}
+    ${current_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${schedule-o_result}    set variable    ${max_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    23    ${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    23    ${schedule-o_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    ###删除所有连接###
+    CLI-noItems    ${console_ip}    ${console_port}    no schedules
+    telnet.close connection
+    ${init_value1}    ${max_value1}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!default value=${init_value}
+    ...    ELSE    log to console    Failed to deleted all objects!
+    log to console    FINISHED SCHEDULE OBJECTS TEST!!!
+
+Application
+    [Arguments]    ${type}    ${run_time}
+    log to console    START 4 APPLICATION TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case1}    evaluate    'Application Firewall Policies'
+    ${test_case2}    evaluate    'Application Firewall APP Objects'
+    ${test_case3}    evaluate    'Application Firewall Actions'
+    ${test_case4}    evaluate    'Application Firewall Email User Objects'
+    ${max_app-p}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_app-o}    get_target_fromCSV    ${type}    ${test_case2}
+    ${max_app-a}    get_target_fromCSV    ${type}    ${test_case3}
+    ${max_app-e}    get_target_fromCSV    ${type}    ${test_case4}
+    log to console    Target: max_app-p=${max_app-p};max_app-o=${max_app-o};max_app-a=${max_app-a};max_app-e=${max_app-e}
+    ###跑脚本###
+    ${num1}    evaluate    ${max_app-p}+2
+    ${num2}    evaluate    ${max_app-o}+2
+    ${num3}    evaluate    ${max_app-a}+2
+    ${num4}    evaluate    ${max_app-e}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o application-p -n ${num1}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o application-o -n ${num2}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o application-a -n ${num3}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o application-e -n ${num4}    ${run_time}
+    SSHLibrary.close connection
+    ###获取测试结果###
+    ${actual_app-p}    ${actual_app-o}    ${actual_app-a}    ${actual_app-e}    get_delete_application_values    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    24    ${actual_app-p}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    25    ${actual_app-o}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    26    ${actual_app-a}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    27    ${actual_app-e}
+    ${app-p_result}    set variable    ${max_app-p}/${actual_app-p}
+    ${app-o_result}    set variable    ${max_app-o}/${actual_app-o}
+    ${app-a_result}    set variable    ${max_app-a}/${actual_app-a}
+    ${app-e_result}    set variable    ${max_app-e}/${actual_app-e}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    24    ${app-p_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    25    ${app-o_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    26    ${app-a_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    27    ${app-e_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case1}    ${actual_app-p}
+    compared_with_target    ${type}    ${test_case2}    ${actual_app-o}
+    compared_with_target    ${type}    ${test_case3}    ${actual_app-a}
+    compared_with_target    ${type}    ${test_case4}    ${actual_app-e}
+    log to console    FINISHED 4 APPLICATION TEST!!!
+
+static route
+    [Arguments]    ${type}    ${run_time}
+    log to console    START STATIC ROUTE TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case1}    evaluate    'Static Routes'
+    ${test_case2}    evaluate    'Static Routes for FQDN'
+    ${max_static-route}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_static-route-fqdn}    get_target_fromCSV    ${type}    ${test_case2}
+    log to console    Target: max_static-route=${max_static-route};max_static-route-fqdn=${max_static-route-fqdn}
+    ###跑脚本###
+    ${num1}    evaluate    ${max_static-route}+2
+    ${num2}    evaluate    ${max_static-route-fqdn}+2
+    ssh_login_capBed    ${tb_ip}
+    ###进行static-route的测试###
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o static-route -n ${num1}    ${run_time}
+    ${actual_static-route}    get_delete_routes    ${type}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    log to console    Finished static route test! actual_static-route=${actual_static-route}
+    Telnet.close connection
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o static-route-fqdn -n ${num2}    ${run_time}
+    ${actual_static-route-fqdn}    get_delete_routes    ${type}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    log to console    Finished static route FQDN test! actual_static-route FQDN=${actual_static-route-fqdn}
+    Telnet.close connection
+    SSHLibrary.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    20    ${actual_static-route}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    33    ${actual_static-route-fqdn}
+    ${static-route_result}    set variable    ${max_static-route}/${actual_static-route}
+    ${static-route-fqdn_result}    set variable    ${max_static-route-fqdn}/${actual_static-route-fqdn}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    20    ${static-route_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    33    ${static-route-fqdn_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case1}    ${actual_static-route}
+    compared_with_target    ${type}    ${test_case2}    ${actual_static-route-fqdn}
+    log to console    FINISHED STATIC ROUTE TEST!!!
+
+nat-policy
+    [Arguments]    ${type}    ${run_time}
+    log to console    START NAT POLICY TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'NAT Policies'
+    ${case_name}    set variable    natPol
+    ${max_nat-pol}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: nat policy=${max_nat-pol}
+    ###跑脚本###
+    ${num}    evaluate    ${max_nat-pol}+2
+    ssh_login_capBed    ${tb_ip}
+    ###进行NAT-POL的测试###
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no nat-policies
+    Telnet.close connection
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o nat-pol -n ${num}    ${run_time}
+    SSHLibrary.close connection
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    ${actual_nat-pol}    get_delete_nat-policies    ${type}    ${case_name}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    8    ${actual_nat-pol}
+    ${nat-pol_result}    set variable    ${max_nat-pol}/${actual_nat-pol}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    8    ${nat-pol_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_nat-pol}
+    log to console    FINISHED NAT POLICY TEST!!!
+
+botnet-filter
+    [Arguments]    ${type}    ${run_time}
+    log to console    START BOTNET-FILTER TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Botnet Filters'
+    ${case_name}    set variable    botnetFilter
+    ${max_botnet-filters}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Botnet Filters=${max_botnet-filters}
+    ###跑脚本###
+    ${num}    evaluate    ${max_botnet-filters}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o botnet-filter -n ${num}    ${run_time}    ${type}    ${case_name}
+    ${actual_botnet-filters}    get_delete_botnet-filter    ${type}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    31    ${actual_botnet-filters}
+    ${botnet-filter_result}    set variable    ${max_botnet-filters}/${actual_botnet-filters}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    31    ${botnet-filter_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_botnet-filters}
+    log to console    FINISHED BOTNET-FILTER TEST!!!
+
+geo-ip-filter
+    [Arguments]    ${type}    ${run_time}
+    log to console    START GEO-IP-FILTER TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'GeoIP Filters'
+    ${case_name}    set variable    geoIP
+    ${max_geo-ip-filters}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Gep Ip Filters=${max_geo-ip-filters}
+    ###跑脚本###
+    ${num}    evaluate    ${max_geo-ip-filters}+2
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o geo-ip-filter -n ${num}    ${run_time}    ${type}    ${case_name}
+    ${actual_geo-ip-filters}    get_delete_geo-ip-filter    ${type}    ${case_name}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    32    ${actual_geo-ip-filters}
+    ${geo-ip-filter_result}    set variable    ${max_geo-ip-filters}/${actual_geo-ip-filters}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    32    ${geo-ip-filter_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_geo-ip-filters}
+    log to console    FINISHED GEO-IP-FILTER TEST!!!
+
+guest_user
+    [Arguments]    ${type}    ${run_time}
+    log to console    START GUEST USER TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Guest Users'
+    ${case_name}    set variable    guestUsr
+    ${max_guest_user}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Guest User=${max_guest_user}
+    ###进行guest user的测试###
+    ${actual_guestUser}    get_delete_guest-user    ${type}    ${max_guest_user}    ${run_time}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${guest-user_result}    set variable    ${max_guest_user}/${actual_guestUser}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    14    ${actual_guestUser}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    14    ${guest-user_result}
+    ###对比测试结果###
+    sleep    60
+    log to console    FINISHED GUEST USER TEST!!!
+
+local-user
+    [Arguments]    ${type}    ${run_time}
+    log to console    START LOCAL USER TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Local Users'
+    ${case_name}    set variable    localUser
+    ${max_local-user}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: local user=${max_local-user}
+    ###跑脚本###
+    ${num}    evaluate    ${max_local-user}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o user-o -n ${num}    ${run_time}    ${type}    ${case_name}
+    ${actual_local-user}    get_delete_local-user    ${type}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    11    ${actual_local-user}
+    ${local-user_result}    set variable    ${max_local-user}/${actual_local-user}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    11    ${local-user_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_local-user}
+    log to console    FINISHED LOCAL USER TEST!!!
+
+S2S-vpn
+    [Arguments]    ${type}
+    log to console    START SITE TO SITE VPN POLICY TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'S2S VPN Policies'
+    ${case_name}    set variable    site2siteVPN
+    ${max_s2sVPN}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Site-to-Site VPN=${max_s2sVPN}
+    ###跑脚本###
+    ${num}    set variable    ${max_s2sVPN}
+    ${run_time0}    evaluate    ${num}/4+200
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    \\cp -r phase2_group_0.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_0.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase2-group -n 1    60
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol -n ${num}    ${run_time0}
+    SSHLibrary.close connection
+    ###Export Config###
+    log to console    Export S2S vpn exp and tsr!
+    Export log    ${type}    ${case_name}
+    sleep    2
+    ${actual_s2sVPN}    get_delete_S2Svpn    ${type}    ${case_name}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    18    ${actual_s2sVPN}
+    ${s2sVPN_result}    set variable    ${max_s2sVPN}/${actual_s2sVPN}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    18    ${s2sVPN_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_s2sVPN}
+    log to console    Finished Site-to-Site VPN test!
+
+group-vpn
+    [Arguments]    ${type}    ${run_time}
+    log to console    START GROUP VPN TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'GroupVPN Policies'
+    ${case_name}    set variable    groupVPN
+    ${max_groupVPN}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Group VPN=${max_groupVPN}
+    ###跑脚本###
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ${num}    evaluate    ${max_groupVPN}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-group-pol -n ${num}    ${run_time}    ${type}    ${case_name}
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    ${actual_groupVPN}    get_groupVPN_value    ${type}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_groupVPN}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    19    ${actual_groupVPN}
+    ${groupVPN_result}    set variable    ${max_groupVPN}/${actual_groupVPN}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    19    ${groupVPN_result}
+    Telnet.close connection
+    ###factory default###
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    config firewall    ${type}
+    log to console    FINISHED GROUP VPN TEST!!!
+
+rest-api
+    [Arguments]    ${type}    ${run_time}
+    log to console    START REST API TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'REST API Agents'
+    ${case_name}    set variable    rest_api
+    ${max_rest-api-agent}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Rest API Agent=${max_rest-api-agent}
+    ###跑脚本###
+    ${num}    set variable    ${max_rest-api-agent}
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o rest-api -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_rest-api-agent}    set variable    ${num}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_rest-api-agent}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    34    ${actual_rest-api-agent}
+    ${rest-api_result}    set variable    ${max_rest-api-agent}/${actual_rest-api-agent}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    34    ${rest-api_result}
+    log to console    FINISHED REST API TEST!!!
+
+access-rule
+    [Arguments]    ${type}
+    log to console    START ACCESS RULES TEST!!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Rules Per Table'
+    ${case_name}    set variable    access_rule
+    ${max_access-rule}    get_target_fromCSV    ${type}    ${test_case}
+    ${num}    evaluate    ${max_access-rule}+2
+    log to console    Target access-rule:${max_access-rule}
+    ###跑脚本###
+    ssh_login_capBed    ${tb_ip}
+    ${run_time}    evaluate    ${max_access-rule}/7+200
+    SSHLibrary.Write    \\cp -r access_rules_multiService.pl access_rules.pl
+    sleep    3
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o access-rules -n ${num}    ${run_time}
+    SSHLibrary.close connection
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    Telnet.write    show tech-support-report access-rules
+    sleep    30
+    ${tsr_o}    Telnet.read
+    ${actual_access-rule}    get tsr value    ${tsr_o}    Current size:\\s+(\\d+)
+    ${max_value}    get tsr value    ${tsr_o}    Maximum total size:\\s+(\\d+)
+    Telnet.Write Bare    q
+    Telnet.write    \r
+    Telnet.close connection
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    15    ${actual_access-rule}
+    ${access-rule_result}    set variable    ${max_value}/${actual_access-rule}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    15    ${access-rule_result}
+    run keyword if    ${max_access-rule}<=10000    del_accessRules_smallBox    ${type}    ${actual_access-rule}
+    ...    ELSE    del_accessRules_bigBox    ${type}    ${actual_access-rule}
+    sleep    100
+    log to console    FINISHED ACCESS RULES TEST!!!!
+    [Teardown]    close all browsers
+
+vlan
+    [Arguments]    ${type}
+    log to console    START VLAN TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'VLANs'
+    ${case_name}    set variable    VLANs
+    ${max_vlan}    get_target_fromCSV    ${type}    ${test_case}
+    ${run_time}    evaluate    ${max_vlan}*20
+    log to console    Target vlan:${max_vlan}
+    ###跑脚本###
+    ${num}    evaluate    ${max_vlan}+2
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    \\cp -r vlan_multi_3_x0.pl vlan_multi_3.pl
+    sleep    2
+    ssh_execute_command    perl /root/capacityTB//scripts/vlan_multi_3.pl -fw ${host_ip} -sn 1 -en ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    ${actual_vlan}    get_vlan_value    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    9    ${actual_vlan}
+    ${vlan_result}    set variable    ${max_vlan}/${actual_vlan}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    9    ${vlan_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_vlan}
+    ###删除所有item###
+    deleteAll_vlan    ${console_ip}    ${console_port}    ${actual_vlan}
+    log to console    FINISHED VLAN TEST!!!
+    [Teardown]    close all browsers
+
+zone
+    [Arguments]    ${type}
+    log to console    START ZONE TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Zones'
+    ${case_name}    set variable    Zones
+    ${max_zone}    get_target_fromCSV    ${type}    ${test_case}
+    ${run_time}    evaluate    ${max_zone}*14
+    log to console    Target zone:${max_zone}
+    ###跑脚本###
+    ${num}    evaluate    ${max_zone}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o zone -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    telnet.write    diag show multicore
+    sleep    5
+    ${rtn}    telnet.read
+    sleep    2
+    log to console    ${rtn}
+    telnet.close connection
+    ${actual_zone}    get_delete_zone    ${type}    ${case_name}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    10    ${actual_zone}
+    ${zone_result}    set variable    ${max_zone}/${actual_zone}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    10    ${zone_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_zone}
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    config firewall    ${type}
+    log to console    FINISHED ZONE TEST!!!
+    [Teardown]    close all browsers
+
+phase1
+    [Arguments]    ${type}
+    log to console    START PHASE1 TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    set variable    VPN Phase 1 SA's
+    ${case_name}    set variable    forPhase1
+    ${max_phase1}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target phase1:${max_phase1}
+    ###跑脚本###
+    ${num0}    evaluate    ${max_phase1}/2500
+    ${num1}    evaluate    ${num0}+1
+    ${run_time}    set variable    120
+    config_wan_grpVPN    ${type}
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase1-routing -n ${num1}    ${run_time}
+    SSHLibrary.close connection
+    ###导出phase1的配置###
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    log to console    Exported Phase1 configuration, please import it to go on your test!
+    ###恢复原始配置###
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    config firewall    ${type}
+    log to console    FINISHED PHASE1 TEST!!!
+    [Teardown]    close all browsers
+
+phase2
+    [Arguments]    ${type}
+    log to console    START PHASE2 TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    "VPN Phase 2 SA's"
+    ${case_name}    set variable    forPhase2
+    ${max_phase2}    get_target_fromCSV    ${type}    ${test_case}
+    ${max_S2S}    get_target_fromCSV    ${type}    S2S VPN Policies
+    ${cmp}    evaluate    ${max_S2S}*20
+    log to console    Target phase2:${max_phase2} \ \ S2S:${max_S2S}
+    ###跑脚本###
+    ssh_login_capBed    ${tb_ip}
+    run keyword if    ${cmp}>=${max_phase2}    runPhase2_bigbox    ${host_ip}    ${max_phase2}
+    ...    ELSE    runPhase2_smallbox    ${host_ip}    ${max_phase2}    ${max_S2S}
+    ###获取测试结果并写入表格中###
+    ${actual_phase2}    get_delete_phase2    ${type}    ${case_name}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    29    ${actual_phase2}
+    ${phase2_result}    set variable    ${max_phase2}/${actual_phase2}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    29    ${phase2_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_phase2}
+    log to console    FINISHED PHASE2 TEST!!!
+    [Teardown]    close all browsers
+
+tunnel-interface
+    [Arguments]    ${type}
+    log to console    START TUNNEL INTERFACE TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ###确定${num}值###
+    ${test_case}    evaluate    'Tunnel interface'
+    ${case_name}    set variable    tunnelInterface
+    ${max_tunnel-interface}    get_target_fromCSV    ${type}    ${test_case}
+    ${test_case1}    evaluate    'S2S VPN Policies'
+    ${max_s2sVPN}    get_target_fromCSV    ${type}    ${test_case1}
+    log to console    Target tunnel interface:${max_tunnel-interface}
+    ${num1}    set variable    ${max_tunnel-interface}
+    ${num2}    set variable    192
+    ${num0}    set variable    1
+    ${num}    run keyword if    ${max_tunnel-interface}>${max_s2sVPN}    setVariable_for_if    ${num0}    ${max_s2sVPN}
+    ...    ELSE IF    192<=${max_tunnel-interface}<${max_s2sVPN}    setVariable_for_if    ${num0}    ${num2}
+    ...    ELSE    setVariable_for_if    ${num0}    ${num1}
+    ${log_content1}    set variable    max_tunnel-interface:${max_tunnel-interface}>max_s2sVPN:${max_s2sVPN},It is unreasonable, please refer to DTS-210843 !! num=max_s2sVPN:${max_s2sVPN}
+    ${log_content2}    set variable    max_tunnel-interface:${max_tunnel-interface}>192 ,It is unreasonable, please refer to DTS-210843 !!num=192
+    run keyword if    ${max_tunnel-interface}>${max_s2sVPN}    run keywords    log to console    ${log_content1}
+    ...    AND    log to xlsx    ${type}    21    ${log_content1}
+    ...    ELSE IF    192<${max_tunnel-interface}<${max_s2sVPN}    run keywords    log to console    ${log_content2}
+    ...    AND    log to xlsx    ${type}    21    ${log_content2}
+    ...    ELSE    log to console    max_tunnel-interface:${max_tunnel-interface}>192 ,It is unreasonable, please refer to DTS-210843 !!num=max_tunnel-interface:${max_tunnel-interface}
+    ###Add VPN Policies###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.write    \\cp vpn_pol_tunnel_addVPN.pl vpn_pol_tunnel.pl
+    sleep    2
+    ${run_time}    evaluate    ${num}*2+100
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol-tunnel -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###Add VPN Interfaces###
+    ${num1}    evaluate    ${num}+1
+    run keyword if    ${num1}<101    addTunnelInterface_less100    ${type}    ${num1}
+    ...    ELSE    addTunnelInterface_more100    ${type}    ${num1}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    ${actual_tunnelInterface}    get_tunnelInterface_value    ${type}    ${num}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    21    ${actual_tunnelInterface}
+    ${tunnel-interface_result}    set variable    ${max_tunnel-interface}/${actual_tunnelInterface}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    21    ${tunnel-interface_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_tunnelInterface}
+    ###删除所有item###
+    deleteAll_tunnelInterface    ${console_ip}    ${console_port}    ${actual_tunnelInterface}
+    ###恢复原始配置###
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    config firewall    ${type}
+    log to console    FINISHED TUNNEL INTERFACE TEST!!!
+    [Teardown]    close all browsers
+
+Address group
+    [Arguments]    ${type}
+    log to console    START ADDRESS GROUP TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Address Groups'
+    ${case_name}    set variable    addressGrp
+    ${max_addressGrp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address group:${max_addressGrp}
+    ${default_addressGrp}    get_default_addressGroup    ${type}
+    ###跑脚本###
+    ${num}    evaluate    ${max_addressGrp}+200
+    ${run_time}    evaluate    ${num}/10
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-g -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    Telnet.close connection
+    run keyword if    ${max_addressGrp}<=20000    del_addressGrp_smallBox    ${type}
+    ...    ELSE    del_addressGrp_bigBox    ${type}
+    log to console    FINISHED ADDRESS GROUP TEST!!!
+    [Teardown]    close all browsers
+
+Address PerGrp
+    [Arguments]    ${type}    ${run_time}
+    log to console    START ADDRESS PER GROUP TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'AO Per Address Group'
+    ${case_name}    set variable    address-pg
+    ###获取target值##
+    ${max_address-pg}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address per group:${max_address-pg}
+    ###跑脚本###
+    ${num}    evaluate    ${max_address-pg}+200
+    CLI-noItems    ${console_ip}    ${console_port}    no address-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-pg -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_address-pg}    set variable    ${num}
+    CLI-noItems    ${console_ip}    ${console_port}    no address-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Telnet.close connection
+    ###获取测试结果并写入表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    3    ${actual_address-pg}
+    ${address-pg_result}    set variable    ${max_address-pg}/${actual_address-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    3    ${address-pg_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_address-pg}
+    log to console    FINISHED ADDRESS PER GROUP TEST!!!
+
+Service PerGrp
+    [Arguments]    ${type}    ${run_time}
+    log to console    START SERVICE PER GROUP TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Service Group Depth'
+    ${case_name}    set variable    service-pg
+    ${max_service-pg}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service per group:${max_service-pg}
+    ###跑脚本###
+    ${num}    set variable    ${max_service-pg}
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o service-pg -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_service-pg}    set variable    ${num}
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    ###获取测试结果并写入表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    7    ${actual_service-pg}
+    ${service-pg_result}    set variable    ${max_service-pg}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    7    ${service-pg_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    FINISHED SERVICE PER GROUP TEST!!!
+
+Service group
+    [Arguments]    ${type}    ${run_time}
+    log to console    START SERVICE GROUP TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Service Groups'
+    ${case_name}    set variable    service-g
+    ###获取target值##
+    ${max_service-g}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service group:${max_service-g}
+    ###跑脚本###
+    ${num}    evaluate    ${max_service-g}+200
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o service-g -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_service-pg}    set variable    ${num}
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    ###获取测试结果并写入表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    5    ${actual_service-pg}
+    ${service-g_result}    set variable    ${max_service-g}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    5    ${service-g_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    FINISHED SERVICE GROUP TEST!!!
+
+Service group depth
+    [Arguments]    ${type}    ${run_time}
+    log to console    START SERVICE GROUP DEPTH TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Service Group Depth'
+    ${case_name}    set variable    service-gd
+    ${max_service-gd}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service group depth:${max_service-gd}
+    ###跑脚本###
+    ${num}    evaluate    ${max_service-gd}+200
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o service-gd -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_service-pg}    set variable    ${num}
+    CLI-noItems    ${console_ip}    ${console_port}    no service-groups
+    Telnet.close connection
+    CLI-noItems    ${console_ip}    ${console_port}    no service-objects
+    Telnet.close connection
+    ###获取测试结果并写入表格中###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    6    ${actual_service-pg}
+    ${service-gd_result}    set variable    ${max_service-gd}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    6    ${service-gd_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    FINISHED SERVICE GROUP DEPTH TEST!!!
+
+Service Objects
+    [Arguments]    ${type}    ${run_time}
+    log to console    START SERVICE OBJECTS!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Service Objects'
+    ${case_name}    set variable    serviceObj
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    service-objects
+    log to console    default:${init_value} \ \ \ target:${max_value}
+    ###跑脚本###
+    ${num}    evaluate    ${max_value}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o service-o -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果###
+    ${current_value}    ${max_value}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    service-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    4    ${current_value}
+    ${service-o_result}    set variable    ${max_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    4    ${service-o_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    ###删除所有连接###
+    CLI-login-firewall    ${console_ip}    ${console_port}
+    Telnet.write    no service-objects
+    sleep    2
+    Telnet.write    commit
+    sleep    4
+    Telnet.Set Prompt    \#
+    Telnet.write    \r
+    Telnet.Read Until Prompt
+    sleep    60
+    Telnet.write    ping 10.7.3.254
+    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    : FOR    ${i}    IN RANGE    10
+    \    run keyword if    '${result}' == 'FAIL'    sleep    20
+    \    EXIT for loop if    '${result}' == 'PASS'
+    \    ${result}    ${returnvalue}    Run Keyword And Ignore Error    Telnet.read until    is alive
+    run keyword if    '${result}' == 'FAIL'    FAIL    Can't ping gateway 10.7.3.254 successfully!
+    ...    ELSE    log    ping gateway successfully!
+    ${init_value1}    ${max_value1}    get_currentvalue_and_targetvalue    ${console_ip}    ${console_port}    service-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!
+    ...    ELSE    log to console    Failed to deleted all objects!
+    log to console    FINISHED SERVICE OBJECTS!!!
+
+user-login
+    [Arguments]    ${type}
+    log to console    START USER LOGIN TEST!!!
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    CLI-config-Test-LAN-X0    ${data[0]["LAN PORT"]}    ${data[0]["LAN IP"]}    ${data[0]["LAN MASK"]}
+    Telnet.Close connection
+    ${X0_IP}    set variable    ${data[0]["LAN IP"]}
+    ${X0_IP_1}    evaluate    '${X0_IP}'.split('.')[0]
+    ${X0_IP_2}    evaluate    '${X0_IP}'.split('.')[1]
+    ${TB_eth1_IP}    evaluate    '${X0_IP_1}'+'.'+'${X0_IP_2}'+'.'+'1'+'.'+'2'
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'User Logins'
+    ${case_name}    set variable    userLogin
+    ${max_user-login}    get_target_fromCSV    ${type}    ${test_case}
+    ${max_local-user}    get_target_fromCSV    ${type}    Local Users
+    ${num_last}    evaluate    ${max_user-login}%${max_local-user}
+    ${num_loop_total}    evaluate    ${max_user-login}/${max_local-user}
+    ${num_loop}    evaluate    ${num_loop_total}-1
+    log to console    Target: user-login=${max_user-login} \ local-user=${max_local-user}
+    ###跑脚本###
+    ${run_time}    evaluate    ${max_local-user}*4+100
+    ${run_time0}    evaluate    ${max_local-user}*6+60
+    ${num}    set variable    ${max_local-user}
+    ###进行测试 第一次add local user###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    ifconfig eth1 ${TB_eth1_IP} netmask 255.255.0.0
+    SSHLibrary.Write    ping ${X0_IP} -c 2
+    sleep    3
+    ${rtn}    SSHLibrary.read
+    ${More}=    check_if_contain    ${rtn}    0% packet loss
+    run keyword if    ${More}== 1    log    Ping successfully !
+    ...    ELSE    log    Ping failed!
+    SSHLibrary.Write    cd /root/capacityTB/bin
+    sleep    2
+    SSHLibrary.Write    \\cp -r capacityConf_9_user-login_addUser.xml \ capacityConf_9.xml
+    sleep    1
+    SSHLibrary.Write    cd /root/capacityTB/scripts
+    sleep    2
+    SSHLibrary.Write    \\cp -r ula_0.pl ula.pl
+    sleep    1
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${X0_IP} -o user-login -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###如果循环次数大于1###
+    run keyword if    ${num_loop_total}>1    user-login_loopRun    ${num_loop}    ${run_time0}    ${X0_IP}    ${num}
+    ...    ${type}    ${case_name}
+    ###最后一次脚本###
+    ${run_time1}    evaluate    ${num_last}*6
+    run keyword if    ${num_last}!=0    user-login_lastRun    ${run_time1}    ${type}    ${case_name}    ${X0_IP}
+    ...    ${num_last}
+    ###获取和退出登录连接###
+    ${actual_user-login}    get_delete_user-login    ${type}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    13    ${actual_user-login}
+    ${user-login_result}    set variable    ${max_user-login}/${actual_user-login}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    13    ${user-login_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_user-login}
+    log to console    FINISHED USER LOGIN TEST!!!
+
+Dynamic AO
+    [Arguments]    ${type}    ${run_time}
+    log to console    START DYNAMIC ADDRESS OBJECTS TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Dynamic Address Objects'
+    ${case_name}    set variable    dynamic1AO
+    ${max_dynamic-ao}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: dynamic ao=${max_dynamic-ao}
+    ###跑脚本###
+    ${num}    evaluate    3+2
+    ssh_login_capBed    ${tb_ip}
+    ###进行dynamic ao的测试###
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-do -n ${num}    ${run_time}
+    ${actual_dynamic-ag}    get_delete_dynamic-ao    ${type}
+    run keyword if    ${actual_dynamic-ag}==${num}    log to console    actual_dynamic-ag=3, actual-dynamic-ao=256
+    SSHLibrary.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    37    256
+    ${dynamic-ao_result}    set variable    ${max_dynamic-ao}/256
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    256
+    log to console    FINISHED DYNAMIC ADDRESS OBJECTS TEST!!!
+
+dhcp
+    [Arguments]    ${type}
+    log to console    START DHCP TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'DHCP Ranges'
+    ${case_name}    set variable    dhcpRanges
+    ###获取target值##
+    ${max_dhcp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target dhcp:${max_dhcp}
+    ###清楚x0的dhcpSever##
+    delete_X0_dhcpRanges    ${type}
+    ###Run script###
+    ${num}    set variable    ${max_dhcp}
+    ${run_time}    evaluate    ${max_dhcp}*14+100
+    ssh_login_capBed    10.7.4.36
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o dhcpv4-s -n ${num}    ${run_time}
+    SSHLibrary.close connection
+    ###获取并删除dhcp###
+    ###需要去查看delete all后的截图来确定是否删除成功###
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    ${actual_dhcp}    get_delete_dhcp    ${type}    ${max_dhcp}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_dhcp}
+    log to console    FINISHED DHCP TEST!!!
+
+Address group depth
+    [Arguments]    ${type}
+    log to console    START ADDRESS GROUP DEPTH TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'Address Group Depth'
+    ${case_name}    set variable    addressGrpDepth
+    ###获取target值##
+    ${max_addressGrpDepth}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address group depth:${max_addressGrpDepth}
+    ###跑脚本###
+    ${num}    evaluate    1000
+    ${time}    set variable    150
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-gd -n ${num}    ${time}    ${type}    ${case_name}
+    log to console    FINISHED ADDRESS GROUP DEPTH TEST!!!
+    ###恢复原始配置###
+    sleep    600
+    recover_orig_conf    ${type}
+
+sonicpoint
+    [Arguments]    ${type}
+    log to console    START SONICPOINT TEST!!!
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###串口下完成测试相关配置####
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'SonicPoint Per Interface'
+    ${case_name}    set variable    sp
+    ${max_sp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: sonicpoint=${max_sp}
+    CLI-login-firewall    ${data[0]["CONSOLE_SERVER"]}    ${consoleserver_port}
+    CLI-config-Test-WLAN-X2    ${data[1]["LAN PORT"]}    ${data[1]["LAN IP"]}    ${data[1]["LAN MASK"]}    ${max_sp}
+    sleep    1
+    ${X2_IP}    set variable    ${data[1]["LAN IP"]}
+    ${X2_IP_1}    evaluate    '${X2_IP}'.split('.')[0]
+    ${X2_IP_2}    evaluate    '${X2_IP}'.split('.')[1]
+    ${TB1_eth2_IP}    evaluate    '${X2_IP_1}'+'.'+'${X2_IP_2}'+'.'+'1'+'.'+'2'
+    ${TB2_eth2_IP}    evaluate    '${X2_IP_1}'+'.'+'${X2_IP_2}'+'.'+'1'+'.'+'3'
+    ###跑脚本###
+    ${num}    set variable    ${max_sp}
+    run keyword if    ${num}>260    sonicpoint_more260    ${X2_IP}    ${type}    ${case_name}    ${TB1_eth2_IP}
+    ...    ${TB2_eth2_IP}
+    ...    ELSE    sonicpoint_less260    ${X2_IP}    ${type}    ${case_name}    ${TB1_eth2_IP}
+    ...    ${num}
+    ###导出配置并获取和删除当前连接###
+    export log    ${type}    ${case_name}
+    Telnet.close connection
+    ${actual_sp}    get_delete_sonicpoint    ${type}    ${max_sp}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_sp}
+    log to console    FINISHED SONICPOINT TEST!!!
+    ###恢复原始配置###
+    log to console    Factory default now! to recover orig conf!
+    factory_default_configure    ${type}
+    sleep    400
+    config firewall    ${type}
+
+rest-api-ul
+    [Arguments]    ${type}
+    log to console    START REST API USER LOGIN TEST!!!
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###串口下完成测试相关配置####
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'REST API User Logins'
+    ${case_name}    set variable    SSO
+    ${max_sso}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: max rest api user login=${max_sso}
+    Config_SSO    ${type}
+    ###导出配置###
+    export log    ${type}    ${case_name}
+    Telnet.close connection
+    ###跑脚本###
+    ${script_name}    evaluate    'testapi_system_max_addbyjson_RF'+'_'+'${type}'+'.py'
+    run keyword if    ${max_sso}>6000    sso_more6000    ${type}    ${max_sso}    ${script_name}
+    ...    ELSE    sso_less6000    ${type}    ${max_sso}    ${script_name}
+    ###获取和删除当前连接###
+    ${actual_sso}    get_sso    ${type}
+    ###写入测试结果##
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    35    ${actual_sso}
+    ${sso_result}    set variable    ${max_sso}/${actual_sso}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    35    ${sso_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_sso}
+    log to console    FINISHED REST API USER LOGIN TEST!!!
+    ###恢复原始配置###
+    recover_orig_conf    ${type}
+
+SSL-VPN
+    [Arguments]    ${type}
+    log to console    START SSL VPN TEST!!!
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###串口下完成测试相关配置####
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'SSLVPN Connections'
+    ${case_name}    set variable    sslvpn
+    ${max_sslvpn}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: actual max sslvpn=${max_sslvpn}+2
+    config_sslvpn    ${console_ip}    ${console_port}
+    ###导出配置###
+    export log    ${type}    ${case_name}
+    Telnet.close connection
+    ###跑脚本###
+    ${num0}    evaluate    (${max_sslvpn}+2)/100
+    ${num1}    evaluate    (${max_sslvpn}+2)%100
+    ${run_time0}    set variable    ${num0}
+    ${script_name}    evaluate    'associate_RF'+'_'+'${type}'+'.sh'
+    sslvpn_bed_login
+    SSHLibrary.Write    sed \ 's/102/100/g' \ associate_RF_cap.sh > ${script_name}
+    ${rtn}    SSHLibrary.read
+    sleep    3
+    log    ${rtn}
+    ${value}=    check_if_contain    ${rtn}    Read-only file system
+    Run keyword if    ${value}== 1    run keywords    SSHLibrary.Write    reboot
+    ...    AND    sleep    300
+    ...    AND    SSHLibrary.close connection
+    ...    AND    sslvpn_bed_login
+    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    ${num}    evaluate    ${num0}+1
+    sslvpn_loopRun    ${num}    ${script_name}
+    ###检查是否加到了最大值###
+    ${maximum_sslvpn}    evaluate    ${max_sslvpn}+2
+    ${more}    check_curr_sslvpn    ${type}    ${maximum_sslvpn}
+    run keyword if    ${more}!=0    sslvpn_loopRun    1    ${script_name}
+    ###删除临时文件###
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/sslvpn
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    2
+    SSHLibrary.close connection
+    ###获取和删除当前连接###
+    ${actual_sslvpn}    get_delete_sslvpn    ${type}    ${max_sslvpn}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_sslvpn}
+    log to console    FINISHED SSL VPN TEST!!!
+    ###恢复原始配置###
+    recover_orig_conf    ${type}
+
+vlan-new
+    [Arguments]    ${type}
+    log to console    START VLAN TEST!!!
+    ###获取盒子相关数据##
+    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'VLANs'
+    ${case_name}    set variable    VLANs
+    ${max_vlan}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target vlan:${max_vlan}
+    ###跑脚本###
+    ${num}    evaluate    ${max_vlan}+2
+    run keyword if    ${num}<202    vlan_oneRun    ${type}    ${case_name}    ${tb_ip}    ${num}
+    ...    ELSE    vlan_twoRun    ${type}    ${case_name}    ${tb_ip}    ${num}
+    ${curr_vlan}    get_vlan_value    ${type}
+    ###判断是否加满，没加满继续加###
+    ${need_add_num}    evaluate    ${max_vlan}-${curr_vlan}
+    ${start_num}    evaluate    ${curr_vlan}+1
+    ${end_num}    set variable    ${max_vlan}
+    run keyword if    ${need_add_num}=0    run keywords    log to console    Already added to maximum!
+    ...    ELSE    run keywords    Just added ${actual_vlan} now, need to add ${need_add_num} again!
+    ...    AND    vlan_addMore    ${type}    ${case_name}    ${tb_ip}    ${start_num}
+    ...    ${end_num}
+    ###获取测试结果并写入表格中###
+    ${actual_vlan}    set variable    1
+    ${actual_vlan}    run keyword if    ${need_add_num}=0    setVariable_for_if    ${actual_vlan}    ${curr_vlan}
+    ...    ELSE    get_vlan_value    ${type}
+    export log    ${type}    ${case_name}
+    telnet.close connection
+    Comment    ${actual_vlan}    get_vlan_value    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    9    ${actual_vlan}
+    ${vlan_result}    set variable    ${max_vlan}/${actual_vlan}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    9    ${vlan_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_vlan}
+    ###删除所有item###
+    deleteAll_vlan    ${console_ip}    ${console_port}    ${actual_vlan}
+    log to console    FINISHED VLAN TEST!!!
+    [Teardown]    close all browsers
+
+load_conf
+    [Arguments]    ${type}
+    ${case_name0}    set variable
+    ${case_name1}    set variable    forPhase1
+    ${case_name2}    set variable    access_rule
+    ${case_name3}    set variable    tunnelInterface
+    ${case_name4}    set variable    VLANs
+    ${case_name5}    set variable    Zones
+    ${case_name6}    set variable    addressGrp
+    ${case_name7}    set variable    addressObj
+    ${case_name8}    set variable    SSO
+    load_conf_byGUI    ${type}    ${case_name1}
+    close all browsers

@@ -1,0 +1,13 @@
+{
+    "address_objects": [
+        {
+            "ipv4": {
+                "name": "addrobj5",
+                "zone": "WAN",
+                "host": {
+                    "ip": "17.1.1.5"
+                }
+            }
+        }
+    ]
+}

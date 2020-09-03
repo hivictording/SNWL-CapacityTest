@@ -1,0 +1,16 @@
+{
+    "address_groups": [
+        {
+            "ipv4": {
+                "name": "ADDR_PER_GROUP",
+                "address_object": {
+                    "ipv4": [
+                        {
+                            "name": "addrobj"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

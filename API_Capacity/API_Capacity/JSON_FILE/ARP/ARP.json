@@ -1,0 +1,13 @@
+{
+    "arp": {
+        "entry": [
+            {
+                "ip": "8.0.0.3",
+                "mac": "001100000003",
+                "interface": "X0",
+                "publish": false,
+                "bind_mac": false
+            }
+        ]
+    }
+}

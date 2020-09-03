@@ -1,0 +1,63 @@
+{
+    "security_policies": [
+        {
+            "ipv4": {
+			    "uuid": "00000000-0000-01fa-0700-00401034f199",
+                "name": "access-rules_1",
+                "enable": true,
+                "priority": {
+                    "manual": 3
+                },
+                "comment": "access_rules",
+                "from": "LAN",
+                "to": "WAN",
+                "source": {
+                    "address": {
+                        "name": "src-1"
+                    },
+                    "port": {
+                        "any": true
+                    }
+                },
+                "destination": {
+                    "address": {
+                        "name": "des-1"
+                    }
+                },
+                "service": {
+                    "name": "FTP"
+                },
+                "users": {
+                    "all": true
+                },
+                "match_operation": "or",
+                "application": {
+                    "any": true
+                },
+                "and_all_matched_applications": false,
+                "web_category": {
+                    "any": true
+                },
+                "url_list": {
+                    "any": true
+                },
+                "custom_match": {
+                    "any": true
+                },
+                "country": {
+                    "any": true
+                },
+                "schedule": {
+                    "always_on": true
+                },
+                "action": "allow",
+                "action_profile": "Default Profile",
+                "ticket": {
+                    "tag1": "",
+                    "tag2": "",
+                    "tag3": ""
+                }
+            }
+        }
+    ]
+}
