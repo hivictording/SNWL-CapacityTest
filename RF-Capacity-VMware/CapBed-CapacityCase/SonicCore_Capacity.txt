@@ -1,0 +1,1393 @@
+*** Settings ***
+Library           Telnet
+Library           Capacity
+Library           Collections
+Resource          ../keyword/keyword.txt
+Library           Selenium2Library
+Library           DateTime
+Library           SSHLibrary
+
+*** Variables ***
+@{equipment_type}    2Core    # 待测试设备类型：TZ-600P,3650-9650, 3600-6600,9200-9800。列表形式，顺序执行
+${slot}           1    # bp端口槽位号
+@{portList}       0    1    2    3    4    5    6
+...               7    # 使用的bp端口
+${group}          2    # 使用bp端口的group id，范围1-12
+@{frameSize}      68    570    1518    # 测试包长
+${location}       E:/RF-Capacity_CapBed - VMware-NGPE/report    # 配置保存地址，注意是斜杠方向”/"
+${ftp_username}    admin    # ftp 用户名
+${ftp_password}    admin    # ftp密码
+${ftpServer_ip}    10.7.13.15    # ftp服务器ip
+${version}        4738-RTQA-32    # 待测试版本号,格式如：551-6543-34v，6.5.2.0-12n，6.5.2.2-39n,6.5.4.0-4n。。ftp服务器上需要设置\\10.190.202.40\FIRMWARE\NG 为ftp下载根目录.
+@{weight}         58    33    9
+${tb_ip}          10.7.13.250
+${ftp_username1}    luli
+${ftp_password1}    password
+${host_ip}        10.7.13.5
+${productMatrix_path}    E:/RF-Capacity_CapBed - VMware/ProductMatrix
+
+*** Test Cases ***
+recover_orig
+    [Template]    recover_orig_conf
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+Capacity_test_Init
+    [Template]    CapacityTestCase
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+config firewall
+    [Template]    configure firewall
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+    [Teardown]    close all browsers
+
+Export orig conf and tsr
+    [Setup]
+    [Template]    exportOrigConf
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+Create_ProductMatrixFile
+    [Template]    CreateTargetCSV
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+deregister_web
+    [Template]    deregister_from_web
+    : FOR    ${item}    IN    @{equipment_type}
+    \    ${item}
+
+tunnelInterface
+    [Setup]
+    SSH-login-firewall    192.168.168.168
+    Set Client Configuration    prompt=#
+    : FOR    ${i}    IN RANGE    51    80
+    \    SSHLibrary.Write    tunnel-interface vpn V_T_I1_${i}
+    \    SSHLibrary.Write    policy test${i}
+    \    sleep    1
+    \    SSHLibrary.Write    ip-assignment VPN static
+    \    sleep    2
+    \    SSHLibrary.Write    ip 10.${i}.1.1
+    \    SSHLibrary.Write    netmask 255.255.255.0
+    \    SSHLibrary.Write    commit
+    \    sleep    6
+    \    ${rtn1}    SSHLibrary.read
+    \    Comment    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    Comment    EXIT for loop if    ${a}!=0
+    \    SSHLibrary.Write    exit
+    \    sleep    1
+    \    SSHLibrary.Write    exit
+    \    sleep    3
+    SSHLibrary.close connection
+
+loadConf
+    Comment    loadCaseConf    3Core    orig
+    export_sec_dos_dec_policy_orig_conf    2Core
+
+123
+    Comment    export Log    3Core    740sec_99dos_185dec_orig
+    ${type}    set variable    3Core
+    Comment    loadCaseConf    ${type}    740sec_99dos_185dec_orig
+    Comment    ssh_login_capBed    ${tb_ip}
+    Comment    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o rest-api -n 10    150
+    Comment    export Log    3Core    10rest-api
+    Comment    loadCaseConf    ${type}    orig
+    Comment    loadCaseConf    ${type}    740sec_99dos_185dec_orig
+    SSH-login-firewall    192.168.168.168
+    Set Client Configuration    prompt=#
+    :FOR    ${i}    IN RANGE    1    200
+    \    SSHLibrary.Write    tunnel-interface vpn V_T_I_${i}
+    \    SSHLibrary.Write    policy test${i}
+    \    sleep    1
+    \    SSHLibrary.Write    ip-assignment VPN static
+    \    sleep    2
+    \    SSHLibrary.Write    ip 10.${i}.1.1
+    \    SSHLibrary.Write    netmask 255.255.255.0
+    \    SSHLibrary.Write    commit
+    \    sleep    12
+    \    Comment    ${rtn1}    SSHLibrary.read
+    \    Comment    ${a}=    check_if_contain    ${rtn1}    Changes made
+    \    Comment    EXIT for loop if    ${a}!=1
+    \    SSHLibrary.Write    exit
+    \    sleep    1
+    \    SSHLibrary.Write    exit
+    \    sleep    3
+    SSHLibrary.close connection
+
+test
+    log to console    Start to run script!
+    ssh_login_capBed    10.7.13.250
+    SSHLibrary.write Until Expected Output    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw 10.7.13.5 -o address-o -n 100 >/root/capacityTB/Log/LucyLog.txt    '#'    1000    500
+    Comment    sleep    300
+    Comment    SSHLibrary.Read Until Prompt
+    Comment    read_console_log    ${type}    ${time}
+    Comment    get pre login banner    10.7.3.253
+    Comment    ${rtn}    SSHLibrary.read
+    Comment    ${More}=    check_if_contain    ${rtn}
+    Comment    run keyword if    ${More}== 1    log
+    SSHLibrary.close connection
+
+*** Keywords ***
+export orig conf and tsr
+    [Arguments]    ${type}
+    ###获取盒子相关数据##
+    @{data}=    read xls file    topology.xlsx    ${type}
+    ${consoleserver_port}    evaluate    int(${data[0]["CONSOLE_TELNETPORT"]})
+    ###导出原始配置####
+    ${path}    evaluate    '${type}'+'-Cap'+'-'+'${version}'
+    ${folder}    evaluate    '${location}'+'/'+'${path}'
+    Create Folder    ${folder}
+    ${filename}    evaluate    '${type}'+'-'+'${version}'+'-Orig'+'.exp'
+    ${filename1}    evaluate    '${type}'+'-'+'${version}'+'-Orig'+'.wri'
+    Export_Conf    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename}    ${type}
+    export_tsr    ${ftp_username1}    ${ftp_password1}    ${ftpServer_ip}    ${path}    ${filename1}    ${type}
+    log to console    finish export orig config and tsr for ${type}
+    LOG TO CONSOLE    Finish export config!
+    Telnet.Close Connection
+    ###获取TSR并填入表格####
+    GetTSR    ${type}
+
+CapacityTestCase
+    [Arguments]    ${type}
+    ${conf_name}    set variable    orig
+    Comment    sleep    240
+    Comment    configure firewall    ${type}
+    Comment    exportOrigConf    ${type}
+    Comment    CreateTargetCSV    ${type}
+    ###factory default##
+    Comment    SSH-login-firewall    192.168.168.168
+    Comment    sleep    1
+    Comment    SSH-Factory-Restore    240
+    Comment    configure firewall    ${type}
+    ###start###
+    Comment    Address group depth    ${type}
+    Comment    Address Objects    ${type}
+    Comment    Address group    ${type}
+    Comment    loadCaseConf    ${type}    sec_dos_dec_orig
+    Comment    user-g    ${type}    360
+    Comment    arp    ${type}    150
+    Comment    schedule objects    ${type}    300
+    Comment    loadCaseConf    ${type}    sec_dos_dec_orig
+    Comment    static route    ${type}    300
+    Comment    loadCaseConf    ${type}    sec_dos_dec_orig
+    Comment    static route-fqdn    ${type}    300
+    Comment    loadCaseConf    ${type}    sec_dos_dec_orig
+    Comment    local-user    ${type}    250
+    Comment    loadCaseConf    ${type}    sec_dos_dec_orig
+    Comment    guest_user    ${type}    100
+    Comment    loadCaseConf    ${type}    ${conf_name}
+    Comment    Service Objects    ${type}    200
+    Comment    loadCaseConf    ${type}    ${conf_name}
+    Comment    Service PerGrp    ${type}    150
+    Comment    loadCaseConf    ${type}    ${conf_name}
+    Comment    Service group    ${type}    250
+    loadCaseConf    ${type}    ${conf_name}
+    Address PerGrp    ${type}    300
+    loadCaseConf    ${type}    ${conf_name}
+    Service group depth    ${type}    150
+    group-vpn    ${type}    250
+    Comment    phase2    ${type}
+    Comment    phase1    ${type}
+    zone    ${type}
+    nat-policy    ${type}    300
+    Comment    schedule_gd    ${type}
+    Comment    vlan    ${type}
+    Comment    S2S-vpn    ${type}
+    Comment    access-rule    ${type}
+    Comment    tunnel-interface    ${type}
+    Comment    need check ,run failed    user-login    ${type}
+    Comment    dhcp    ${type}
+    Comment    ssl-vpn    ${type}
+    Comment    sdwan    ${type}
+    Comment    botnet-filter    ${type}    150
+    Comment    geo-ip-filter    ${type}    150
+    Comment    Application    ${type}    200
+    Comment    user-login    ${type}
+
+Address Objects
+    [Arguments]    ${type}
+    log to console    Start address objects test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Address Objects'
+    ${case_name}    set variable    addressObj
+    ${max_value}    get_target_fromCSV    ${type}    ${test_case}
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_ao_tsr}    get_defaultvalue_and_targetvalue    address-objects
+    ###跑脚本###
+    CLI-noItems    no address-objects
+    ${num}    evaluate    ${max_value}+2
+    ${run_time}    evaluate    ${num}/8+60
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o address-o -n ${num} >/root/capacityTB/Log/LucyLog.txt \     ${run_time}    ${type}    ${case_name}
+    ###获取测试结果###
+    export log    ${type}    ${case_name}
+    ${current_value}    ${max_ao_tsr}    get_defaultvalue_and_targetvalue    address-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${AO_result}    set variable    ${max_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    0    ${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    0    ${AO_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    ###删除所有连接###
+    del_addressObj    ${type}    ${init_value}
+    compared_with_target    ${type}    ${test_case}    ${current_value}
+    log to console    Finished address objects test!
+
+user-g
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start User Group test!
+    ${default_useGrp}    get_userGrp_value
+    log to console    default user groups=${default_useGrp}
+    ###跑脚本###
+    ${run_time}    evaluate    150
+    ${test_case}    evaluate    'User Groups'
+    ${case_name}    set variable    usrGrp
+    ${max_userGrp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target value:${max_userGrp}
+    ${num}    set variable    ${max_userGrp}
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o user-g -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    ${actual_useGrp}    get_userGrp_value
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${user-g_result}    set variable    ${max_userGrp}/${actual_useGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    12    ${actual_useGrp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    12    ${user-g_result}
+    ###对比测试结果###
+    compared_with_target_ex    ${type}    ${test_case}    ${actual_useGrp}    ${default_useGrp}
+    ###删除所有连接数###
+    deleteAll_userGrp    ${default_useGrp}
+    log to console    Finished User Group test!
+    [Teardown]    close all browsers
+
+arp
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start ARP test!
+    ###跑脚本###
+    ${test_case}    evaluate    'Static ARP Entries'
+    ${case_name}    set variable    staticARP
+    ${max_arp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target value:${max_arp}
+    ${num}    evaluate    ${max_arp}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o static-arp -n ${num} >/root/capacityTB/Log/LucyLog.txt     ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    get_arpResult
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${arp_result}    set variable    300/300
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    22    ${max_arp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    22    ${arp_result}
+    ###删除所有连接###
+    CLI-noItems    no arp entries
+    log to console    Finished ARP test!
+    Comment    SSHLibrary.close connection
+    [Teardown]    close all browsers
+
+schedule objects
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start schedule objects test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Schedule Objects'
+    ${case_name}    set variable    scheduleObj
+    Comment    ${max_ao}    get_target_fromCSV    ${type}    ${test_case}
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    schedule-objects
+    ${target_value}    get_target_fromCSV    ${type}    ${test_case}
+    ${path}    ${name}    get_tsr_file    ${type}
+    ###跑脚本###
+    ${num}    evaluate    ${target_value}+2
+    Comment    ${time}    evaluate    3600
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o schedule-o -n ${num} > /root/capacityTB/Log/LucyLog.txt     ${run_time}    ${type}    ${case_name}
+    ###获取测试结果###
+    export log    ${type}    ${case_name}
+    ${current_value}    ${max_value}    get_defaultvalue_and_targetvalue    schedule-objects
+    ${schedule-o_result}    set variable    ${target_value}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    23    ${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    23    ${schedule-o_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    Comment    ###与target值对比###
+    Comment    compared_with_target    ${type}    ${test_case}    ${test_result}
+    ###删除所有连接###
+    CLI-noItems    no schedules
+    Comment    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    ${init_value1}    ${max_value1}    get_defaultvalue_and_targetvalue    schedule-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!default value=${init_value}
+    ...    ELSE    log to console    Failed to deleted all objects!
+    log to console    Finished schedule objects test!
+
+Application
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start 4 application test!
+    ###获取盒子相关数据##
+    ${test_case1}    evaluate    'Application Firewall Policies'
+    ${test_case2}    evaluate    'Application Firewall APP Objects'
+    ${test_case3}    evaluate    'Application Firewall Actions'
+    ${test_case4}    evaluate    'Application Firewall Email User Objects'
+    ${max_app-p}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_app-o}    get_target_fromCSV    ${type}    ${test_case2}
+    ${max_app-a}    get_target_fromCSV    ${type}    ${test_case3}
+    ${max_app-e}    get_target_fromCSV    ${type}    ${test_case4}
+    log to console    Target: max_app-p=${max_app-p};max_app-o=${max_app-o};max_app-a=${max_app-a};max_app-e=${max_app-e}
+    ###获取item的初始值和target值##
+    Comment    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ###跑脚本###
+    ${num1}    evaluate    ${max_app-p}+2
+    ${num2}    evaluate    ${max_app-o}+2
+    ${num3}    evaluate    ${max_app-a}+2
+    ${num4}    evaluate    ${max_app-e}+2
+    Comment    ${time}    evaluate    3600
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o application-p -n ${num1}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o application-o -n ${num2}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o application-a -n ${num3}    ${run_time}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o application-e -n ${num4}    ${run_time}
+    SSHLibrary.close connection
+    ###获取测试结果###
+    ${actual_app-p}    ${actual_app-o}    ${actual_app-a}    ${actual_app-e}    get_delete_application_values    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${app-p_result}    set variable    ${max_app-p}/${actual_app-p}
+    ${app-o_result}    set variable    ${max_app-o}/${actual_app-o}
+    ${app-a_result}    set variable    ${max_app-a}/${actual_app-a}
+    ${app-e_result}    set variable    ${max_app-e}/${actual_app-e}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    24    ${actual_app-p}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    25    ${actual_app-o}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    26    ${actual_app-a}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    27    ${actual_app-e}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    24    ${app-p_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    25    ${app-o_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    26    ${app-a_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    27    ${app-e_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case1}    ${actual_app-p}
+    compared_with_target    ${type}    ${test_case2}    ${actual_app-o}
+    compared_with_target    ${type}    ${test_case3}    ${actual_app-a}
+    compared_with_target    ${type}    ${test_case4}    ${actual_app-e}
+
+static route
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start static route test!
+    ###获取盒子相关数据##
+    ${test_case1}    evaluate    'Static Routes'
+    ${test_case2}    evaluate    'Static Routes for FQDN'
+    ${case_name}    set variable    StaticRoutes
+    ${max_static-route}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_static-route-fqdn}    get_target_fromCSV    ${type}    ${test_case2}
+    log to console    Target: max_static-route=${max_static-route};max_static-route-fqdn=${max_static-route-fqdn}
+    ###获取item的初始值和target值##
+    Comment    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ###跑脚本###
+    ${num1}    evaluate    ${max_static-route}+2
+    ${num2}    evaluate    ${max_static-route-fqdn}+2
+    Comment    ${time}    evaluate    3600
+    ssh_login_capBed    ${tb_ip}
+    ###进行static-route的测试###
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o static-route -n ${num1} > /root/capacityTB/Log/LucyLog.txt    ${run_time}
+    export log    ${type}    ${case_name}
+    ${actual_static-route}    get_routes    ${type}
+    ###写入测试结果###
+    Comment    ${actual_app-p}    ${actual_app-o}    ${actual_app-a}    ${actual_app-e}    get_delete_application_values    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    20    ${actual_static-route}
+    Comment    write_to_xlsFile    ${path}    ${name}.xlsx    2    33    ${actual_static-route-fqdn}
+    ${static-route_result}    set variable    ${max_static-route}/${actual_static-route}
+    Comment    ${static-route-fqdn_result}    set variable    ${max_static-route-fqdn}/${actual_static-route-fqdn}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    20    ${static-route_result}
+    Comment    write_to_xlsFile    ${path}    ${name}.xlsx    3    33    ${static-route-fqdn_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case1}    ${actual_static-route}
+    Comment    compared_with_target    ${type}    ${test_case2}    ${actual_static-route-fqdn}
+    ###Factory Defualt###
+    SSH-login-firewall    192.168.168.168
+    sleep    1
+    SSH-Factory-Restore    240
+    configure firewall    ${type}
+    log to console    Finished route test!
+
+nat-policy
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start nat-pol test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'NAT Policies'
+    ${case_name}    set variable    natPol
+    ${max_nat-pol}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: nat policy=${max_nat-pol}
+    ###获取item的初始值和target值##
+    Comment    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ###跑脚本###
+    ${run_time}    evaluate    ${max_nat-pol}/2+100
+    ${num}    evaluate    ${max_nat-pol}+2
+    ###进行static-route的测试###
+    CLI-noItems    no nat-policies
+    CLI-noItems    no address-objects
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o nat-pol -n ${num} >/root/capacityTB/Log/LucyLog.txt \    ${run_time}
+    export log    ${type}    ${case_name}
+    ${actual_nat-pol}    get_delete_nat-policies    ${type}
+    CLI-noItems    no address-objects
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    8    ${actual_nat-pol}
+    ${nat-pol_result}    set variable    ${max_nat-pol}/${actual_nat-pol}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    8    ${nat-pol_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_nat-pol}
+    log to console    Finished nat policies test!
+
+botnet-filter
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start botnet-filter test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Botnet Filters'
+    ${case_name}    set variable    botnetFilter
+    ${max_botnet-filters}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Botnet Filters=${max_botnet-filters}
+    ###跑脚本###
+    ${num}    evaluate    ${max_botnet-filters}+2
+    ###进行static-route的测试###
+    CLI-noItems    no address-objects
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o botnet-filter -n ${num}    ${run_time}    ${type}    ${case_name}
+    ${actual_botnet-filters}    get_delete_botnet-filter    ${type}
+    CLI-noItems    no address-objects
+    Comment    log to console    finished static-route test
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    31    ${actual_botnet-filters}
+    ${botnet-filter_result}    set variable    ${max_botnet-filters}/${actual_botnet-filters}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    31    ${botnet-filter_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_botnet-filters}
+    log to console    Finished botnet filter test!
+
+geo-ip-filter
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start geo-ip-filter test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'GeoIP Filters'
+    ${case_name}    set variable    geoIP
+    ${max_geo-ip-filters}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Gep Ip Filters=${max_geo-ip-filters}
+    ###跑脚本###
+    ${num}    evaluate    ${max_geo-ip-filters}+2
+    CLI-noItems    no address-objects
+    ssh_login_capBed    ${tb_ip}
+    ###进行static-route的测试###
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o geo-ip-filter -n ${num}    ${run_time}    ${type}    ${case_name}
+    ${actual_geo-ip-filters}    get_delete_geo-ip-filter    ${type}    ${case_name}
+    CLI-noItems    no address-objects
+    Comment    log to console    finished static-route test
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    32    ${actual_geo-ip-filters}
+    ${geo-ip-filter_result}    set variable    ${max_geo-ip-filters}/${actual_geo-ip-filters}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    32    ${geo-ip-filter_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_geo-ip-filters}
+    log to console    Finished geo ip test!
+
+guest_user
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start guest user test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Guest Users'
+    ${case_name}    set variable    guestUsr
+    ${max_guest_user}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Guest User=${max_guest_user}
+    ###进行static-route的测试###
+    ${value}    get_delete_guest-user    ${type}    ${max_guest_user}    ${run_time}    ${case_name}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${guest-user_result}    set variable    ${max_guest_user}/${max_guest_user}
+    run keyword if    ${value}==1    run keywords    write_to_xlsFile    ${path}    ${name}.xlsx    2
+    ...    14    ${max_guest_user}
+    ...    AND    write_to_xlsFile    ${path}    ${name}.xlsx    3    14
+    ...    ${guest-user_result}
+    Comment    run keyword if    ${value}==1    write_to_xlsFile    ${path}    ${name}.xlsx    2
+    ...    14    ${max_guest_user}
+    Comment    write_to_xlsFile    ${path}    ${name}.xlsx    2    14    ${actual_guest-user}
+    ###对比测试结果###
+    log to console    Finished guest user test!
+
+local-user
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start Local User test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Local Users'
+    ${case_name}    set variable    localUser
+    ${max_local-user}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: local user=${max_local-user}
+    ###跑脚本###
+    ${num}    evaluate    ${max_local-user}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o user-o -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time}    ${type}    ${case_name}
+    export log    ${type}    ${case_name}
+    ${actual_local-user}    get_delete_local-user    ${type}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    11    ${actual_local-user}
+    ${local-user_result}    set variable    ${max_local-user}/${actual_local-user}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    11    ${local-user_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_local-user}
+    log to console    Finished local user test!
+
+S2S-vpn
+    [Arguments]    ${type}
+    log to console    Start site-to-site vpn test!
+    ###获取盒子相关数据##
+    Comment    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'S2S VPN Policies'
+    ${case_name}    set variable    site2siteVPN
+    ${max_S2S}    get_target_fromCSV    ${type}    S2S VPN Policies
+    ${run_time0}    evaluate    ${max_S2S}/5+300
+    log to console    Target S2S: ${max_S2S}
+    ${num}    set variable    ${max_S2S}
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    \\cp -r phase2_group_0.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_0.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o phase2-group -n 1    60
+    SSHLibrary.close connection
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o vpn-pol -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time0}    ${type}    ${case_name}
+    Export log    ${type}    ${case_name}
+    SSHLibrary.close connection
+    ${actual_s2sVPN}    get_delete_S2Svpn    ${type}    ${case_name}
+    CLI-noItems    no address-groups
+    CLI-noItems    no address-objects
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    18    ${actual_s2sVPN}
+    ${s2sVPN_result}    set variable    ${max_S2S}/${actual_s2sVPN}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    18    ${s2sVPN_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_s2sVPN}
+    log to console    Finished Site-to-Site VPN test!
+
+group-vpn
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start group vpn test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'GroupVPN Policies'
+    ${case_name}    set variable    groupVPN
+    ${max_groupVPN}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Group VPN=${max_groupVPN}
+    ###跑脚本###
+    CLI-noItems    no address-objects
+    ${num}    evaluate    ${max_groupVPN}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o vpn-group-pol -n ${num}    ${run_time}    ${type}    ${case_name}
+    export log    ${type}    ${case_name}
+    ${actual_groupVPN}    get_groupVPN_value    ${type}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_groupVPN}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    19    ${actual_groupVPN}
+    ${groupVPN_result}    set variable    ${max_groupVPN}/${actual_groupVPN}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    19    ${groupVPN_result}
+    Telnet.close connection
+    ###factory default###
+    log to console    Factory default now! to recover orig conf!
+    SSH-login-firewall    192.168.168.168
+    sleep    1
+    SSH-Factory-Restore    400
+    configure firewall    ${type}
+    log to console    Finished Group VPN test!
+
+rest-api
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start rest api test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'REST API Agents'
+    ${case_name}    set variable    rest_api
+    ${max_rest-api-agent}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: Rest API Agent=${max_rest-api-agent}
+    ###进行rest-api的测试###
+    ${num}    set variable    ${max_rest-api-agent}
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o rest-api -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_rest-api-agent}    set variable    ${num}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_rest-api-agent}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    34    ${actual_rest-api-agent}
+    ${rest-api_result}    set variable    ${max_rest-api-agent}/${actual_rest-api-agent}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    34    ${rest-api_result}
+    log to console    Finished rest-api test!
+    Comment    SSHLibrary.close connection
+
+vlan
+    [Arguments]    ${type}
+    log to console    Start vlan test!
+    ###跑脚本###
+    ${test_case}    evaluate    'VLANs'
+    ${case_name}    set variable    VLANs
+    ${max_vlan}    get_target_fromCSV    ${type}    ${test_case}
+    ${run_time}    evaluate    ${max_vlan}*18
+    log to console    Target vlan:${max_vlan}
+    ${num}    evaluate    ${max_vlan}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB//scripts/vlan_multi_3_GEN7.pl -fw ${host_ip} -sn 1 -en ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    ${actual_vlan}    get_vlan_value    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    9    ${actual_vlan}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_vlan}
+    ${vlan_result}    set variable    ${max_vlan}/${actual_vlan}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    9    ${vlan_result}
+    export log    ${type}    ${case_name}
+    SSHLibrary.Close Connection
+    ###删除所有item###
+    deleteAll_vlan    ${max_vlan}
+    log to console    Finished Vlan test!
+    [Teardown]    close all browsers
+
+zone
+    [Arguments]    ${type}
+    log to console    Start zone test!
+    ###跑脚本###
+    Comment    ${run_time}    evaluate    150
+    ${test_case}    evaluate    'Zones'
+    ${case_name}    set variable    Zones
+    ${max_zone}    get_target_fromCSV    ${type}    ${test_case}
+    ${run_time}    evaluate    ${max_zone}*16
+    log to console    Target zone:${max_zone}
+    ${num}    evaluate    ${max_zone}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o zone -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    SSHLibrary.Close Connection
+    ${actual_zone}    get_delete_zone    ${type}    ${case_name}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    10    ${actual_zone}
+    ${zone_result}    set variable    ${max_zone}/${actual_zone}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    10    ${zone_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_zone}
+    log to console    Factory default now! to recover orig conf!
+    SSH-login-firewall    192.168.168.168
+    sleep    1
+    SSH-Factory-Restore    240
+    configure firewall    ${type}
+    log to console    Finished zone test!
+    [Teardown]    close all browsers
+
+phase1
+    [Arguments]    ${type}
+    log to console    Start phase1 test!
+    ###跑脚本###
+    ${test_case}    set variable    VPN Phase 1 SA's
+    ${case_name}    set variable    forPhase1
+    ${max_phase1}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target phase1:${max_phase1}
+    ${num0}    evaluate    ${max_phase1}/2500
+    ${num1}    evaluate    ${num0}+1
+    ${run_time}    set variable    120
+    config_wan_grpVPN    ${type}
+    log to console    Please configure X0 IP as 172.1.1.1 \ netmask 255.255.0.0 before phase1 test!
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o phase1-routing -n ${num1}    ${run_time}
+    SSHLibrary.close connection
+    ###导出phase1的配置###
+    export log    ${type}    ${case_name}
+    SSHLibrary.close connection
+    log to console    Exported Phase1 configuration, please import it to go on your test!
+    ###恢复原始配置###
+    recover_orig conf    ${type}
+    [Teardown]    close all browsers
+
+tunnel-interface
+    [Arguments]    ${type}
+    log to console    Start tunnel interface test!
+    ###确定${num}值###
+    ${test_case}    evaluate    'Tunnel interface'
+    ${case_name}    set variable    tunnelInterface
+    ${max_tunnel-interface}    get_target_fromCSV    ${type}    ${test_case}
+    ${test_case1}    evaluate    'S2S VPN Policies'
+    ${max_s2sVPN}    get_target_fromCSV    ${type}    ${test_case1}
+    log to console    Target tunnel interface:${max_tunnel-interface}
+    ${num1}    evaluate    ${max_tunnel-interface}+2
+    ${num2}    set variable    192
+    ${num}    run keyword if    ${max_tunnel-interface}>${max_s2sVPN}    set variable    ${max_s2sVPN}
+    ...    ELSE IF    192<${max_tunnel-interface}<${max_s2sVPN}    set variable    ${num2}
+    ...    ELSE    set variable    ${num1}
+    ${log_content1}    set variable    max_tunnel-interface:${max_tunnel-interface}>max_s2sVPN:${max_s2sVPN},It is unreasonable, please refer to DTS-210843 !! num=max_s2sVPN:${max_s2sVPN}
+    ${log_content2}    set variable    max_tunnel-interface:${max_tunnel-interface}>192 ,It is unreasonable, please refer to DTS-210843 !!num=192
+    run keyword if    ${max_tunnel-interface}>${max_s2sVPN}    run keywords    log to console    ${log_content1}
+    ...    AND    log to xlsx    ${type}    21    ${log_content1}
+    ...    ELSE IF    192<${max_tunnel-interface}<${max_s2sVPN}    run keywords    log to console    ${log_content2}
+    ...    AND    log to xlsx    ${type}    21    ${log_content2}
+    ...    ELSE    log to console    max_tunnel-interface:${max_tunnel-interface}>192 ,It is unreasonable, please refer to DTS-210843 !!num=max_tunnel-interface:${max_tunnel-interface}
+    ###Add VPN Policies###
+    ssh_login_capBed    ${tb_ip}
+    ${run_time}    evaluate    ${num}+200
+    SSHLibrary.write    \\cp vpn_pol_tunnel_addVPN.pl vpn_pol_tunnel.pl
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o vpn-pol-tunnel -n ${num}    ${run_time}
+    SSHLibrary.close connection
+    ###Add VPN Interfaces###
+    addTunnelInterface_192
+    ###获取测试结果并写入表格中###
+    export log    ${type}    ${case_name}
+    SSHLibrary.close connection
+    ${actual_tunnelInterface}    get_tunnelInterface_value    ${type}    ${num}
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    21    ${actual_tunnelInterface}
+    ${tunnel-interface_result}    set variable    ${max_tunnel-interface}/${actual_tunnelInterface}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    21    ${tunnel-interface_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_tunnelInterface}
+    ###删除所有item###
+    deleteAll_tunnelInterface
+    log to console    Finished tunnel interface test!
+    ###恢复原始配置###
+    Comment    log to console    Factory default now! to recover orig conf!
+    Comment    recover_orig conf    ${type}
+    loadCaseConf    ${type}    orig
+    [Teardown]    close all browsers
+
+Address group
+    [Arguments]    ${type}
+    log to console    Start address group test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Address Groups'
+    ${case_name}    set variable    addressGrp
+    Comment    ${max_ag}    get_target_fromCSV    ${type}    ${test_case}
+    ###获取target值##
+    ${max_addressGrp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address group:${max_addressGrp}
+    ###跑脚本###
+    ${num}    evaluate    ${max_addressGrp}+200
+    ${run_time}    evaluate    ${num}/8+60
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o address-g -n ${num} > /root/capacityTB/Log/LucyLog.txt     ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    log to console    Export current address-g exp and tsr!
+    export log    ${type}    ${case_name}
+    ###get and delete current address groups###
+    ${actual_addressGrp}    del_addressGrp    ${type}
+    compared_with_target    ${type}    ${test_case}    ${actual_addressGrp}
+    log to console    Finished address groups test!
+
+Address PerGrp
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start address per group test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'AO Per Address Group'
+    ${case_name}    set variable    address-pg
+    ###获取target值##
+    ${max_address-pg}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address per group:${max_address-pg}
+    ###跑脚本###
+    ${num}    evaluate    ${max_address-pg}+200
+    CLI-noItems    no address-groups
+    CLI-noItems    no address-objects
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o address-pg -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_address-pg}    set variable    ${num}
+    export log    ${type}    ${case_name}
+    CLI-noItems    no address-groups
+    CLI-noItems    no address-objects
+    Telnet.close connection
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    3    ${actual_address-pg}
+    ${address-pg_result}    set variable    ${max_address-pg}/${actual_address-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    3    ${address-pg_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_address-pg}
+    log to console    Finished address per group test!
+
+Service PerGrp
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start service per group test!
+    ###获取盒子相关数据##
+    Comment    ${host_ip}    ${console_ip}    ${console_port}    get_ip_port    ${type}
+    ${test_case}    evaluate    'SO Per Service Group'
+    ${case_name}    set variable    service-pg
+    ###获取target值##
+    ${max_service-pg}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service per group:${max_service-pg}
+    ###跑脚本###
+    ${num}    set variable    ${max_service-pg}
+    CLI-noItems    no service-groups
+    CLI-noItems    no service-objects
+    ssh_login_capBed    ${tb_ip}
+    Comment    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-pg -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    runScript    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o service-pg -n ${num}    ${run_time}    ${num}    ${test_case}
+    ${actual_service-pg}    set variable    ${num}
+    export log    ${type}    ${case_name}
+    CLI-noItems    no service-objects
+    CLI-noItems    no service-groups
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    7    ${actual_service-pg}
+    ${service-pg_result}    set variable    ${max_service-pg}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    7    ${service-pg_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    Finished service per group test!
+
+Service group
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start service group test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Service Groups'
+    ${case_name}    set variable    service-g
+    ###获取target值##
+    ${max_service-g}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service group:${max_service-g}
+    ###跑脚本###
+    ${num}    evaluate    ${max_service-g}+200
+    CLI-noItems    no service-groups
+    CLI-noItems    no service-objects
+    ssh_login_capBed    ${tb_ip}
+    Comment    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-pg -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    runScript    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o service-g -n ${num}    ${run_time}    ${num}    ${test_case}
+    export log    ${type}    ${case_name}
+    ${actual_service-pg}    set variable    ${num}
+    CLI-noItems    no service-groups
+    CLI-noItems    no service-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    5    ${actual_service-pg}
+    ${service-g_result}    set variable    ${max_service-g}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    5    ${service-g_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    Finished service group test!
+
+Service group depth
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start service group depth test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Service Group Depth'
+    ${case_name}    set variable    service-gd
+    ###获取target值##
+    ${max_service-gd}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service group depth:${max_service-gd}
+    ###跑脚本###
+    ${num}    evaluate    ${max_service-gd}+200
+    CLI-noItems    no service-groups
+    CLI-noItems    no service-objects
+    ssh_login_capBed    ${tb_ip}
+    Comment    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-pg -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    runScript    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o service-gd -n ${num}    ${run_time}    ${num}    ${test_case}
+    export log    ${type}    ${case_name}
+    ${actual_service-pg}    set variable    ${num}
+    CLI-noItems    no service-groups
+    CLI-noItems    no service-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    6    ${actual_service-pg}
+    ${service-gd_result}    set variable    ${max_service-gd}/${actual_service-pg}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    6    ${service-gd_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_service-pg}
+    log to console    Finished service group depth test!
+
+Service Objects
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start service objects test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Service Objects'
+    ${case_name}    set variable    serviceObj
+    ${max_serviceObj}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target service objects:${max_serviceObj}
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    service-objects
+    log to console    default:${init_value} \ \ \ target:${max_value}
+    ###跑脚本###
+    ${num}    evaluate    ${max_value}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o service-o -n ${num}    ${run_time}    ${type}    ${case_name}
+    ###获取测试结果###
+    export log    ${type}    ${case_name}
+    ${current_value}    ${max_value}    get_defaultvalue_and_targetvalue    service-objects
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    4    ${current_value}
+    ${service-o_result}    set variable    ${max_serviceObj}/${current_value}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    4    ${service-o_result}
+    ###与target值对比###
+    run keyword if    ${max_value}==${current_value}    log to console    Passed! max_value:${max_value}=current_value:${current_value}
+    ...    ELSE IF    ${max_value}<${current_value}    log to console    Need to confirm!max_value:${max_value}<current_value:${current_value}
+    ...    ELSE    log to console    Failed!!${max_value} \ \ \ \ \ current_value:${current_value}
+    Comment    ###与target值对比###
+    Comment    compared_with_target    ${type}    ${test_case}    ${test_result}
+    ###删除所有连接###
+    CLI-noItems    no service-objects
+    ${init_value1}    ${max_value1}    get_defaultvalue_and_targetvalue    service-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete all objects successfully!!
+    ...    ELSE    log to console    Failed to deleted all objects!
+    log to console    Finished service objects test!
+
+user-login
+    [Arguments]    ${type}
+    log to console    Start User Login test!
+    ###Set X2 Zone as LAN
+    ${LAN_port}    set variable    X2
+    ${X2_IP}    set variable    13.1.1.1
+    ${X2_netmask}    set variable    255.255.0.0
+    SSH-login-firewall    192.168.168.168
+    SSH-config -Test-LAN    ${LAN_port}    ${X2_IP}    ${X2_netmask}
+    SSHLibrary.close connection
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'User Logins'
+    ${case_name}    set variable    userLogin
+    Export log    ${type}    ${case_name}
+    SSHLibrary.close connection
+    ${max_user-login}    get_target_fromCSV    ${type}    ${test_case}
+    ${max_local-user}    get_target_fromCSV    ${type}    Local Users
+    ${num_last}    evaluate    ${max_user-login}%${max_local-user}
+    ${num_loop_total}    evaluate    ${max_user-login}/${max_local-user}
+    ${num_loop}    evaluate    ${num_loop_total}-1
+    log to console    Target: user-login=${max_user-login} \ local-user=${max_local-user}
+    ###跑脚本###
+    ${run_time}    evaluate    ${max_local-user}*3+300
+    ${num}    set variable    ${max_local-user}
+    ###进行测试 第一次add local user###
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    ifconfig eth2 13.1.1.2 netmask 255.255.0.0 gateway 13.1.1.1
+    sleep    5
+    SSHLibrary.Write    ping ${X2_IP} -c 2
+    sleep    3
+    ${rtn}    SSHLibrary.read
+    ${More}=    check_if_contain    ${rtn}    0% packet loss
+    run keyword if    ${More}== 1    log    Ping successfully !
+    ...    ELSE    log    Ping failed!
+    SSHLibrary.Write    cd /root/capacityTB/bin
+    sleep    2
+    SSHLibrary.Write    \\cp -r capacityConf_9_user-login_addUser.xml \ capacityConf_9.xml
+    sleep    1
+    SSHLibrary.Write    cd /root/capacityTB/scripts
+    sleep    2
+    SSHLibrary.Write    \\cp -r ula_0.pl ula.pl
+    sleep    1
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${X2_IP} -o user-login -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time}    ${type}    ${case_name}
+    ###如果循环次数大于1###
+    run keyword if    ${num_loop_total}>1    user-login_loopRun    ${num_loop}    ${run_time}    ${X2_IP}    ${num}
+    ...    ${type}    ${case_name}
+    ###最后一次脚本###
+    ${run_time1}    evaluate    ${num_last}*3+300
+    run keyword if    ${num_last}!=0    user-login_lastRun    ${run_time1}    ${type}    ${case_name}    ${X2_IP}
+    ...    ${num_last}
+    ###获取和退出登录连接###
+    export log    ${type}    ${case_name}
+    ${actual_user-login}    get_delete_user-login    ${type}
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    13    ${actual_user-login}
+    ${user-login_result}    set variable    ${max_user-login}/${actual_user-login}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    13    ${user-login_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_user-login}
+    log to console    Finished user login test!
+
+Dynamic AO
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start dynamic address objects test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Dynamic Address Objects'
+    ${case_name}    set variable    dynamic1AO
+    ${max_dynamic-ao}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: dynamic ao=${max_dynamic-ao}
+    ###跑脚本###
+    Comment    ${num}    evaluate    ${max_dynamic-ao}+2
+    ${num}    evaluate    3+2
+    ssh_login_capBed    ${tb_ip}
+    ###进行static-route的测试###
+    Comment    CLI-noItems    ${console_ip}    ${console_port}    no address-objects
+    Comment    Telnet.close connection
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o address-do -n ${num}    ${run_time}
+    ${actual_dynamic-ag}    get_delete_dynamic-ao    ${type}
+    Comment    run keyword if    ${actual_dynamic-ag}==${num}    run keywords    log to console    actual_dynamic-ag=3, actual-dynamic-ao=256
+    ...    AND    export log    ${type}    ${case_name}
+    ...    AND    factory_default_configure    ${console_ip}    ${console_port}    200
+    ...    AND    configure firewall    ${type}
+    run keyword if    ${actual_dynamic-ag}==${num}    log to console    actual_dynamic-ag=3, actual-dynamic-ao=256
+    SSHLibrary.close connection
+    ###写入测试结果###
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    37    256
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    256
+    log to console    Finished dynamic ao test!
+
+phase2
+    [Arguments]    ${type}
+    log to console    Start phase2 test!
+    ###跑脚本###
+    ${test_case}    evaluate    "VPN Phase 2 SA's"
+    ${case_name}    set variable    forPhase2
+    ${max_phase2}    get_target_fromCSV    ${type}    ${test_case}
+    ${max_S2S}    get_target_fromCSV    ${type}    S2S VPN Policies
+    ${n}    evaluate    ${max_phase2}/20
+    ${num}    run keyword if    ${n}>${max_S2S}    set variable    ${max_S2S}
+    ...    ELSE    set variable    ${n}
+    ${phase2_group_num}    run keyword if    ${n}>${max_S2S}    evaluate    ${max_phase2}/${max_S2S}
+    ...    ELSE    set variable    20
+    ${run_time0}    evaluate    ${num}/3+100
+    log to console    Target phase2:${max_phase2} \ \ S2S:${max_S2S}
+    ssh_login_capBed    ${tb_ip}
+    SSHLibrary.Write    \\cp -r phase2_group_0.pl phase2_group.pl
+    sleep    3
+    SSHLibrary.Write    \\cp -r vpn_pol_manual_0.pl vpn_pol.pl
+    sleep    1
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o phase2-group -n ${phase2_group_num}    100
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o vpn-pol -n ${num} >/root/capacityTB/Log/LucyLog.txt    ${run_time0}
+    Export log    ${type}    ${case_name}
+    ###获取测试结果并写入表格中###
+    ${actual_phase2}    get_delete_phase2    ${type}    ${case_name}
+    CLI-noItems    no address-groups
+    CLI-noItems    no address-objects
+    Comment    Telnet.close connection
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    29    ${actual_phase2}
+    ${phase2_result}    set variable    ${max_phase2}/${actual_phase2}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    29    ${phase2_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_phase2}
+    log to console    Finished phase2 test!
+    [Teardown]    close all browsers
+
+access-rule
+    [Arguments]    ${type}
+    log to console    Start access rules test!
+    ###跑脚本###
+    ${test_case}    evaluate    'Rules Per Table'
+    ${case_name}    set variable    access_rule
+    ${max_access-rule}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target access-rule:${max_access-rule}
+    ${num}    evaluate    ${max_access-rule}+2
+    @{data}=    read xls file    Virtual_topology.xlsx    topology
+    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    ssh_login_capBed    ${tb_ip}
+    ${run_time}    evaluate    ${max_access-rule}/7+200
+    SSHLibrary.Write    \\cp -r access_rules_multiService.pl access_rules.pl
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o access-rules -n ${num}    ${run_time}
+    ###获取测试结果并写入表格中###
+    log to console    Export current access-rules EXP and TSR!
+    Export log    ${type}    ${case_name}
+    SSH-login-firewall    192.168.168.168
+    Set Client Configuration    prompt=#
+    SSHLibrary.write    show tech-support-report access-rules
+    sleep    20
+    ${tsr_o}    SSHLibrary.read
+    ${actual_access-rule}    get tsr value    ${tsr_o}    Current size:\\s+(\\d+)
+    ${max_value}    get tsr value    ${tsr_o}    Maximum total size:\\s+(\\d+)
+    SSHLibrary.Write Bare    q
+    SSHLibrary.write    \r
+    SSHLibrary.close connection
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    15    ${actual_access-rule}
+    ${access-rule_result}    set variable    ${max_value}/${actual_access-rule}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    15    ${access-rule_result}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_access-rule}
+    ###删除所有添加###
+    del_accessRules    ${type}    ${actual_access-rule}
+    log to console    Finished access rule test!
+    ###Recover configuration###
+    recover_orig conf    ${type}
+    [Teardown]    close all browsers
+
+dhcp
+    [Arguments]    ${type}
+    log to console    Start dhcp test!
+    ###获取盒子相关数据##
+    ${test_case}    set variable    DHCP Ranges
+    ${case_name}    set variable    dhcpRanges
+    ###获取target值##
+    ${max_dhcp}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target dhcp:${max_dhcp}
+    ###清楚x0的dhcpSever##
+    delete_X0_dhcpRanges    ${type}
+    ###Run script###
+    ${num}    set variable    ${max_dhcp}
+    ${run_time}    evaluate    ${max_dhcp}*14+100
+    ssh_login_capBed    10.7.4.36
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o dhcpv4-s -n ${num}    ${run_time}
+    export log    ${type}    ${case_name}
+    ###获取并删除dhcp###
+    ###需要去查看delete all后的截图来确定是否删除成功###
+    ${actual_dhcp}    get_delete_dhcp    ${type}    ${max_dhcp}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_dhcp}
+    log to console    Finished dhcp ranges test!
+
+ssl-vpn
+    [Arguments]    ${type}
+    log to console    Start SSL VPN test!
+    ###串口下完成测试相关配置####
+    ${test_case}    evaluate    'SSLVPN Connections'
+    ${case_name}    set variable    sslvpn
+    ${max_sslvpn}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target: actual max sslvpn=${max_sslvpn}+2
+    config_sslvpn
+    ###导出配置###
+    export log    ${type}    ${case_name}
+    ###跑脚本###
+    @{data}=    read xls file    Virtual_topology.xlsx    topology
+    ${host_ip}    set variable    ${data[0]["HOST_IP"]}
+    ${num0}    evaluate    (${max_sslvpn}+2)/100
+    ${num1}    evaluate    (${max_sslvpn}+2)%100
+    ${script_name}    evaluate    'associate_RF'+'_'+'${type}'+'.sh'
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/sslvpn
+    SSHLibrary.Write    sed \ 's/102/102/g' \ associate_RF_cap.sh > ${script_name}
+    sleep    1
+    SSHLibrary.Write    sed -i 's/10.7.3.35/${host_ip}/g' \ ${script_name}
+    sleep    1
+    SSHLibrary.Write    chmod 777 ${script_name}
+    sleep    3
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/sslvpn
+    SSHLibrary.Write    ./${script_name}
+    sleep    900
+    SSHLibrary.close connection
+    SSHLibrary.Open Connection    10.7.3.251    port= 22    timeout=5
+    SSHLibrary.Login    root    password    delay=5
+    SSHLibrary.Write    cd /root/sslvpn
+    SSHLibrary.Write    rm -rf ${script_name}
+    sleep    2
+    SSHLibrary.close connection
+    ###获取和删除当前连接###
+    ${actual_sslvpn}    get_delete_sslvpn    ${type}    ${max_sslvpn}
+    ###对比测试结果###
+    compared_with_target    ${type}    ${test_case}    ${actual_sslvpn}
+    log to console    Finished sslvpn test!
+    ###恢复原始配置###
+    recover_orig_conf    ${type}
+
+Address group depth
+    [Arguments]    ${type}
+    log to console    Start address group test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Address Group Depth'
+    ${case_name}    set variable    addressGrpDepth
+    ###获取target值##
+    ${max_addressGrpDepth}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address group depth:${max_addressGrpDepth}
+    ###跑脚本###
+    ${num}    evaluate    ${max_addressGrpDepth}+10
+    ${time}    set variable    150
+    ssh_login_capBed    ${tb_ip}
+    runScript    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o address-gd -n ${num}    ${time}    ${num}    ${test_case}
+    ${actual_address-gd}    set variable    ${num}
+    ###导出配置###
+    export log    ${type}    ${case_name}
+    ###写入测试结果##
+    ${path}    ${name}    get_tsr_file    ${type}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    2    ${actual_address-gd}
+    ${address-gd_result}    set variable    ${max_addressGrpDepth}/${actual_address-gd}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    2    ${address-gd_result}
+    ##删除所有添加数据###
+    CLI-noItems    no address-groups
+    CLI-noItems    no address-objects
+    log to console    Finished address group depth test!
+
+sdwan
+    [Arguments]    ${type}
+    log to console    start sdwan test!
+    ###Get SD-WAN cases' target values###
+    ${test_case0}    evaluate    'S2S VPN Policies'
+    ${test_case1}    evaluate    'Tunnel interface'
+    ${test_case2}    evaluate    'Max SD-WAN Groups'
+    ${test_case4}    evaluate    'Max SD-WAN members'
+    ${test_case5}    evaluate    'Max performance probes'
+    ${test_case6}    evaluate    'Max performance child probes'
+    ${test_case7}    evaluate    'Max path selection profile'
+    ${test_case8}    evaluate    'Max performance class'
+    ${max_s2sVPN}    get_target_fromCSV    ${type}    ${test_case0}
+    ${max_tunnel-interface}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_sdwan-grp}    get_target_fromCSV    ${type}    ${test_case2}
+    ${max_sdwan-int}    get_target_fromCSV    ${type}    ${test_case4}
+    ${max_sdwan-pp}    get_target_fromCSV    ${type}    ${test_case5}
+    ${max_sdwan-pcp}    get_target_fromCSV    ${type}    ${test_case6}
+    ${max_sdwan-psp}    get_target_fromCSV    ${type}    ${test_case7}
+    ${max_sdwan-pco}    get_target_fromCSV    ${type}    ${test_case8}
+    ${pco_num}    set variable    ${max_sdwan-pco}
+    ${n0}    evaluate    ${max_sdwan-int}/10
+    ${n1}    evaluate    ${n0}*10
+    ${n3}    evaluate    ${n1}/2
+    ###Add tunnel Interface###
+    ${num1}    set variable    ${max_tunnel-interface}
+    ${num2}    set variable    192
+    ${max_TI_support}    run keyword if    ${max_tunnel-interface}>${max_s2sVPN}    set variable    ${max_s2sVPN}
+    ...    ELSE IF    192<${max_tunnel-interface}<${max_s2sVPN}    set variable    ${num2}
+    ...    ELSE    set variable    ${num1}
+    ${interface_tunnel_num}    run keyword if    ${max_TI_support}<${n3}    set variable    ${max_TI_support}
+    ...    ELSE    set variable    ${n3}
+    ${interface_vlan_num}    evaluate    ${max_sdwan-int}-${interface_tunnel_num}
+    ssh_login_capBed    ${tb_ip}
+    ${run_time}    evaluate    ${max_TI_support}*2+100
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o vpn-pol-tunnel -n ${max_TI_support}    ${run_time}
+    SSHLibrary.close connection
+    Comment    run keyword if    ${max_TI_support}==192    addTunnelInterface_192
+    ...    ELSE    addTunnelInterface    ${max_TI_support}
+    ###add VLAN Interface###
+    sdwan-addVLANinterface    ${type}    ${interface_vlan_num}
+    addTunnelInterface    ${interface_tunnel_num}
+    ###Run script###
+    run_sdwan    ${pco_num}    ${interface_tunnel_num}    ${interface_vlan_num}
+    ###Check Results###
+    ${case_name}    set variable    sdwan_cases
+    Export log    ${type}    ${case_name}
+    SSHLibrary.close connection
+    ${actual_sdwan_grp}    ${actual_sdwan_pp}    ${actual_sdwan_pco}    ${actual_sdwan_psp}    get_delete_sdwan_values    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${sdwan_grp_result}    set variable    ${max_sdwan-grp} /${actual_sdwan_grp}
+    ${sdwan_pp_result}    set variable    ${max_sdwan-pp}/${actual_sdwan_pp}
+    ${sdwan_pco_result}    set variable    ${max_sdwan_pco}/${actual_sdwan_pco}
+    ${sdwan_psp_result}    set variable    ${max_sdwan_psp}/${actual_sdwan_psp}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    34    ${sdwan_grp_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    36    ${sdwan_pp_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    38    ${sdwan_psp_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    39    ${sdwan_pco_result}
+    ###Compared with target###
+    compared_with_target    ${type}    ${test_case2}    ${actual_sdwan_grp}
+    compared_with_target    ${type}    ${test_case5}    ${actual_sdwan_pp}
+    compared_with_target    ${type}    ${test_case7}    ${actual_sdwan_psp}
+    compared_with_target    ${type}    ${test_case8}    ${actual_sdwan_pco}
+    run keyword if    ${actual_sdwan_grp} ==${max_sdwan-grp} and ${actual_sdwan_pp}==${max_sdwan-pp} and ${actual_sdwan_psp}==${max_sdwan-psp} and ${actual_sdwan_pco}==${max_sdwan-pco}    run keywords    write_to_xlsFile    ${path}    ${name}.xlsx    2
+    ...    35    ${max_sdwan-int}
+    ...    AND    write_to_xlsFile    ${path}    ${name}.xlsx    2    37
+    ...    ${max_sdwan-pcp}
+    ${sdwan_int_targeResult}    set variable    ${max_sdwan-int}/${max_sdwan-int}
+    ${sdwan-pcp_targetResult}    set variable    ${max_sdwan-pcp}/${max_sdwan-pcp}
+    run keyword if    ${actual_sdwan_grp} ==${max_sdwan-grp} and ${actual_sdwan_pp}==${max_sdwan-pp} and ${actual_sdwan_psp}==${max_sdwan-psp} and ${actual_sdwan_pco}==${max_sdwan-pco}    run keywords    write_to_xlsFile    ${path}    ${name}.xlsx    3
+    ...    35    ${sdwan_int_targeResult}
+    ...    AND    write_to_xlsFile    ${path}    ${name}.xlsx    3    37
+    ...    ${sdwan-pcp_targetResult}
+    log to console    Finished SDWAN test!
+
+schedule_gd
+    [Arguments]    ${type}
+    log to console    Start schedule group depth test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Schedule Object Group Nesting Depth'
+    ${case_name}    set variable    scheduleGrpDepth
+    ${max_schedule_gd}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target schedule gd=${max_schedule_gd}
+    ###获取item的初始值和target值##
+    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    schedule-objects
+    ###跑脚本###
+    ${path}    ${name}    get_tsr_file    ${type}
+    ${num}    set variable    ${max_schedule_gd}
+    ${run_time}    set variable
+    ssh_login_capBed    ${tb_ip}
+    log to console    Start to run script!
+    SSHLibrary.write    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o schedule-gd -n ${num}
+    sleep    150
+    ${rtn}    SSHLibrary.read
+    ${More}=    check_if_contain    ${rtn}    post params successful
+    Comment    log to console    ${rtn}
+    ${path}    ${name}    get_tsr_file    ${type}
+    run keyword if    ${More}== 1    run keywords    log to console    Add ${num} schedule grp depth successfully!
+    ...    AND    write_to_xlsFile    ${path}    ${name}.xlsx    2    40
+    ...    ${max_schedule_gd}
+    ...    ELSE    log to console    Add max schedule grp depth failed!
+    SSHLibrary.close connection
+    ###删除所有连接###
+    CLI-noItems    no schedules
+    ${init_value1}    ${max_value1}    get_defaultvalue_and_targetvalue    schedule-objects
+    run keyword if    '${init_value1}' == '${init_value}'    log to console    delete schedule group depth successfully!!default value=${init_value}
+    ...    ELSE    log to console    Failed to deleted schedule group depth!
+    log to console    Finished schedule grp depth test!
+
+Address group depth-tsr
+    [Arguments]    ${type}
+    log to console    Start address group test!
+    ###获取盒子相关数据##
+    ${test_case}    evaluate    'Address Group Depth'
+    ${case_name}    set variable    addressGrpDepth
+    ###获取target值##
+    ${max_addressGrpDepth}    get_target_fromCSV    ${type}    ${test_case}
+    log to console    Target address group depth:${max_addressGrpDepth}
+    ###跑脚本###
+    ${num}    evaluate    1000
+    ${time}    set variable    150
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_command    perl /root/capacityTB/bin/capacityInit.pl -fw ${host_ip} -o address-gd -n ${num}    ${time}    ${type}    ${case_name}
+    Comment    SSHLibrary.Switch Connection    192.168.168.168    port= ${port}    timeout=10
+    Comment    SSHLibrary.Login    admin    password    delay=5
+    Comment    SSHLibrary.Write    configure terminal
+    Comment    sleep    3
+    Comment    ${rtn}=    SSHLibrary.read
+    Comment    ${a}=    check_if_contain    ${rtn}    [no]:
+    Comment    Run keyword if    ${a} == 1    SSHLibrary.Write    yes
+    Comment    sleep    1
+    log to console    Finished address group depth test!
+    ###恢复原始配置###
+    sleep    600
+    recover_orig_conf    ${type}
+
+static route-fqdn
+    [Arguments]    ${type}    ${run_time}
+    log to console    Start static route test!
+    ###获取盒子相关数据##
+    ${test_case1}    evaluate    'Static Routes'
+    ${test_case2}    evaluate    'Static Routes for FQDN'
+    ${case_name}    set variable    StaticRoutesFQDN
+    ${max_static-route}    get_target_fromCSV    ${type}    ${test_case1}
+    ${max_static-route-fqdn}    get_target_fromCSV    ${type}    ${test_case2}
+    log to console    Target: max_static-route=${max_static-route};max_static-route-fqdn=${max_static-route-fqdn}
+    ###获取item的初始值和target值##
+    Comment    ${init_value}    ${max_value}    get_defaultvalue_and_targetvalue    ${console_ip}    ${console_port}    schedule-objects
+    ###跑脚本###
+    ${num1}    evaluate    ${max_static-route}+2
+    ${num2}    evaluate    ${max_static-route-fqdn}+2
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o static-route-fqdn -n ${num2} >/root/capacityTB/Log/LucyLog.txt     ${run_time}
+    export log    ${type}    ${case_name}
+    ${actual_static-route-fqdn}    get_routes    ${type}
+    Comment    CLI-noItems    no address-objects
+    Comment    log to console    Finished static route FQDN test! actual_static-route FQDN=${actual_static-route-fqdn}
+    ###写入测试结果###
+    Comment    ${actual_app-p}    ${actual_app-o}    ${actual_app-a}    ${actual_app-e}    get_delete_application_values    ${type}
+    ${path}    ${name}    get_tsr_file    ${type}
+    Comment    write_to_xlsFile    ${path}    ${name}.xlsx    2    20    ${actual_static-route}
+    write_to_xlsFile    ${path}    ${name}.xlsx    2    33    ${actual_static-route-fqdn}
+    Comment    ${static-route_result}    set variable    ${max_static-route}/${actual_static-route}
+    ${static-route-fqdn_result}    set variable    ${max_static-route-fqdn}/${actual_static-route-fqdn}
+    Comment    write_to_xlsFile    ${path}    ${name}.xlsx    3    20    ${static-route_result}
+    write_to_xlsFile    ${path}    ${name}.xlsx    3    33    ${static-route-fqdn_result}
+    ###对比测试结果###
+    Comment    compared_with_target    ${type}    ${test_case1}    ${actual_static-route}
+    compared_with_target    ${type}    ${test_case2}    ${actual_static-route-fqdn}
+    ###Factory Defualt###
+    SSH-login-firewall    192.168.168.168
+    sleep    1
+    SSH-Factory-Restore    240
+    configure firewall    ${type}
+    log to console    Finished route test!
+
+export_sec_dos_dec_policy_orig_conf
+    [Arguments]    ${type}
+    loadCaseConf    ${type}    orig
+    ${security_pol_num}    set variable    705
+    ${dos_pol_num}    set variable    500
+    ${dec_pol_num}    set variable    176
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o security-pol -n ${security_pol_num} >/root/capacityTB/Log/LucyLog.txt     1200
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o dos-pol -n ${dos_pol_num} >/root/capacityTB/Log/LucyLog.txt \     400
+    ssh_login_capBed    ${tb_ip}
+    ssh_execute_commands    perl /root/capacityTB/bin/capacityInit_GEN7.pl -fw ${host_ip} -o dec-pol -n ${dec_pol_num} >/root/capacityTB/Log/LucyLog.txt \     400
+    export Log    ${type}    sec_dos_dec_orig
